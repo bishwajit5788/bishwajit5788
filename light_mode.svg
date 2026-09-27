@@ -405,7 +405,7 @@
       <!-- Left Column: Commits -->
       <text x="0" y="0" class="label">Commits:</text>
       <text x="65" y="0" class="dots">........</text>
-      <text id="commit_data" x="140" y="0" class="val-num">102+</text>
+      <text id="commit_data" x="140" y="0" class="val-num">95+</text>
 
       <!-- Right Column: Followers -->
       <text x="280" y="0" class="label">| Followers:</text>
