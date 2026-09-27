@@ -37,6 +37,42 @@ HEADERS: Dict[str, str] = {
 if GITHUB_TOKEN:
     HEADERS["Authorization"] = f"Bearer {GITHUB_TOKEN}"
 
+# 32-line ASCII radiograph matrix generated from assets/xray-profile-reference.png
+ASCII_XRAY_LINES = [
+    "                      ::                      ",
+    "                     -++-                     ",
+    "                   .=*==*=.                   ",
+    "                  -=-*++*-=:                  ",
+    "                .===+:==:+=+=.                ",
+    "               -=:*=:*%#+-+*:=-               ",
+    "             :*+=*:-%*=-=#=:#==+.             ",
+    "            ==+#+.:@*-*+:=@-.+*+=-            ",
+    "        .+++-=+:  ##-*+=+-##  -+=:+=+.        ",
+    "        -+=**= . :#*#-::-**#: . =**=+:        ",
+    "         +**- :=: *#*::--::*#* :=: -**+       ",
+    "         +** ...::%*-**==+*-*%::... **+       ",
+    "         +++.: :-+%::+****+:-%+-: ::+++       ",
+    "         ++:.+-+.%--=. --..--=%.=-+:+++       ",
+    "         +#*-+=-+#.-#--#+--#-.*=-==-*#+       ",
+    "         ++* -* ++. -##*=##=.:++ *: *++       ",
+    "         +#*:-:.-%- ++#=-#=+.-%:.:::*#+       ",
+    "         +**-..:.%+:-+*::*+-:*#.:..=*++       ",
+    "         +++  .-**%: :#++#: -%+*-   *++       ",
+    "         +++ .+@@-*=. :++: .=+-@%+. *++       ",
+    "         +**:%@#%*.*:-.  .-:*.*%*%%-**+       ",
+    "         ++*==#++#-:-:-..-:-:-#++*=+*++       ",
+    "        .++*#+:+*.#-..*==*..-#.*+:=#+++.      ",
+    "         :=+=+*==.::.=+==+=.::.==*+=+-:       ",
+    "            -=*+*= ... ++ ... -*+*=-          ",
+    "             .=+*#*: .:++:. :*##+=.           ",
+    "               -+=+*-..::..-**=+-             ",
+    "                 =+-+*:==:**-+-               ",
+    "                  .===#++#===.                ",
+    "                    :=*==*=:                  ",
+    "                      ===-                    ",
+    "                       ::                     ",
+]
+
 
 def build_svg_template(mode: str = "dark") -> str:
     """
@@ -57,8 +93,10 @@ def build_svg_template(mode: str = "dark") -> str:
         dots_op = "0.45"
         accent = "#700004"
         scan_beam_color = "#FEFACD"
-        scan_beam_op = "0.30"
+        scan_beam_op = "0.28"
         panel_border_op = "0.45"
+        ascii_color = "#700004"
+        ascii_glow_color = "#700004"
     else:
         bg_canvas = "#FEFACD"
         bg_panel = "#FEFACD"
@@ -71,8 +109,17 @@ def build_svg_template(mode: str = "dark") -> str:
         dots_op = "0.40"
         accent = "#700004"
         scan_beam_color = "#1A2517"
-        scan_beam_op = "0.22"
+        scan_beam_op = "0.20"
         panel_border_op = "0.55"
+        ascii_color = "#700004"
+        ascii_glow_color = "#700004"
+
+    # Build ASCII tspan rows
+    ascii_tspans = []
+    for i, line in enumerate(ASCII_XRAY_LINES):
+        y_pos = 120.0 + i * 11.2
+        ascii_tspans.append(f'<tspan x="54" y="{y_pos:.1f}">{html.escape(line)}</tspan>')
+    ascii_markup = "\n      ".join(ascii_tspans)
 
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 600" width="100%" height="100%">
@@ -99,9 +146,9 @@ def build_svg_template(mode: str = "dark") -> str:
       <stop offset="100%" stop-color="{scan_beam_color}" stop-opacity="0"/>
     </linearGradient>
 
-    <!-- Glow Filter for X-Ray Elements -->
-    <filter id="xrayGlow_{mode}" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+    <!-- Phosphor Glow Filter for ASCII X-Ray Art -->
+    <filter id="asciiGlow_{mode}" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1.6" result="blur"/>
       <feMerge>
         <feMergeNode in="blur"/>
         <feMergeNode in="SourceGraphic"/>
@@ -115,6 +162,7 @@ def build_svg_template(mode: str = "dark") -> str:
 
   <style>
     .mono {{ font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, "Roboto Mono", monospace; }}
+    .ascii {{ font-family: "JetBrains Mono", Consolas, "SFMono-Regular", Menlo, monospace; font-size: 10.5px; font-weight: 700; white-space: pre; }}
     .title {{ font-size: 20px; font-weight: 700; fill: {text_primary}; }}
     .headline {{ font-size: 13.5px; font-weight: 600; fill: {text_primary}; letter-spacing: 0.5px; }}
     .desc {{ font-size: 12px; fill: {text_muted}; fill-opacity: {text_muted_op}; }}
@@ -174,175 +222,24 @@ def build_svg_template(mode: str = "dark") -> str:
     <path d="M 380 502 L 380 508 L 374 508" fill="none" stroke="{accent}" stroke-width="1.5"/>
 
     <!-- ============================================== -->
-    <!-- X-RAY / HARDWARE RECON EMBLEM (cx=214, cy=300) -->
+    <!-- X-RAY / HARDWARE RECON EMBLEM (ASCII Matrix)   -->
     <!-- ============================================== -->
-    <g id="xray_artwork" transform="translate(0, 0)">
-      <!-- Targeting Background Circles -->
-      <circle cx="214" cy="300" r="162" fill="none" stroke="{accent}" stroke-width="0.8" stroke-opacity="0.25" stroke-dasharray="2 6"/>
-      <circle cx="214" cy="300" r="118" fill="none" stroke="{text_primary}" stroke-width="0.8" stroke-opacity="0.12"/>
-      <circle cx="214" cy="300" r="72" fill="none" stroke="{accent}" stroke-width="0.8" stroke-opacity="0.3" stroke-dasharray="3 4"/>
+    <!-- Targeting Crosshairs and Radar Rings Behind ASCII -->
+    <circle cx="214" cy="295" r="152" fill="none" stroke="{accent}" stroke-width="0.7" stroke-opacity="0.25" stroke-dasharray="2 6"/>
+    <circle cx="214" cy="295" r="108" fill="none" stroke="{text_primary}" stroke-width="0.7" stroke-opacity="0.12"/>
+    <circle cx="214" cy="295" r="68" fill="none" stroke="{accent}" stroke-width="0.7" stroke-opacity="0.3" stroke-dasharray="3 4"/>
 
-      <!-- Crosshairs -->
-      <line x1="68" y1="300" x2="360" y2="300" stroke="{accent}" stroke-width="0.7" stroke-opacity="0.35" stroke-dasharray="4 4"/>
-      <line x1="214" y1="120" x2="214" y2="475" stroke="{accent}" stroke-width="0.7" stroke-opacity="0.35" stroke-dasharray="4 4"/>
-      <line x1="164" y1="297" x2="164" y2="303" stroke="{accent}" stroke-width="1" stroke-opacity="0.5"/>
-      <line x1="264" y1="297" x2="264" y2="303" stroke="{accent}" stroke-width="1" stroke-opacity="0.5"/>
-      <line x1="211" y1="240" x2="217" y2="240" stroke="{accent}" stroke-width="1" stroke-opacity="0.5"/>
-      <line x1="211" y1="360" x2="217" y2="360" stroke="{accent}" stroke-width="1" stroke-opacity="0.5"/>
+    <line x1="56" y1="295" x2="372" y2="295" stroke="{accent}" stroke-width="0.7" stroke-opacity="0.35" stroke-dasharray="4 4"/>
+    <line x1="214" y1="102" x2="214" y2="488" stroke="{accent}" stroke-width="0.7" stroke-opacity="0.35" stroke-dasharray="4 4"/>
 
-      <!-- Outer Heavy Hexagonal Titanium Frame -->
-      <polygon points="214,158 337,229 337,371 214,442 91,371 91,229"
-               fill="none" stroke="{accent}" stroke-width="4" stroke-opacity="0.85"/>
-
-      <!-- Inner Parallel Hexagonal Beam -->
-      <polygon points="214,172 325,236 325,364 214,428 103,364 103,236"
-               fill="none" stroke="{text_primary}" stroke-width="1.5" stroke-opacity="0.55"/>
-
-      <!-- Intermediate Hex Reinforcing Truss -->
-      <polygon points="214,184 315,242 315,358 214,416 113,358 113,242"
-               fill="none" stroke="{accent}" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 3"/>
-
-      <!-- Mechanical Joint Collars at the 6 Vertices -->
-      <!-- Top (214, 158) -->
-      <circle cx="214" cy="158" r="13" fill="{bg_panel}" stroke="{accent}" stroke-width="2.5"/>
-      <circle cx="214" cy="158" r="8" fill="none" stroke="{text_primary}" stroke-width="1.2" stroke-opacity="0.7"/>
-      <circle cx="214" cy="158" r="3.5" fill="{accent}"/>
-      <!-- Top-Right (337, 229) -->
-      <circle cx="337" cy="229" r="13" fill="{bg_panel}" stroke="{accent}" stroke-width="2.5"/>
-      <circle cx="337" cy="229" r="8" fill="none" stroke="{text_primary}" stroke-width="1.2" stroke-opacity="0.7"/>
-      <circle cx="337" cy="229" r="3.5" fill="{accent}"/>
-      <!-- Bottom-Right (337, 371) -->
-      <circle cx="337" cy="371" r="13" fill="{bg_panel}" stroke="{accent}" stroke-width="2.5"/>
-      <circle cx="337" cy="371" r="8" fill="none" stroke="{text_primary}" stroke-width="1.2" stroke-opacity="0.7"/>
-      <circle cx="337" cy="371" r="3.5" fill="{accent}"/>
-      <!-- Bottom (214, 442) -->
-      <circle cx="214" cy="442" r="13" fill="{bg_panel}" stroke="{accent}" stroke-width="2.5"/>
-      <circle cx="214" cy="442" r="8" fill="none" stroke="{text_primary}" stroke-width="1.2" stroke-opacity="0.7"/>
-      <circle cx="214" cy="442" r="3.5" fill="{accent}"/>
-      <!-- Bottom-Left (91, 371) -->
-      <circle cx="91" cy="371" r="13" fill="{bg_panel}" stroke="{accent}" stroke-width="2.5"/>
-      <circle cx="91" cy="371" r="8" fill="none" stroke="{text_primary}" stroke-width="1.2" stroke-opacity="0.7"/>
-      <circle cx="91" cy="371" r="3.5" fill="{accent}"/>
-      <!-- Top-Left (91, 229) -->
-      <circle cx="91" cy="229" r="13" fill="{bg_panel}" stroke="{accent}" stroke-width="2.5"/>
-      <circle cx="91" cy="229" r="8" fill="none" stroke="{text_primary}" stroke-width="1.2" stroke-opacity="0.7"/>
-      <circle cx="91" cy="229" r="3.5" fill="{accent}"/>
-
-      <!-- Internal Radiograph Circuit Architecture / PCB Traces -->
-      <g opacity="0.65">
-        <rect x="114" y="280" width="18" height="28" rx="2" fill="none" stroke="{text_primary}" stroke-width="1.2"/>
-        <line x1="110" y1="285" x2="114" y2="285" stroke="{text_primary}" stroke-width="1"/>
-        <line x1="110" y1="290" x2="114" y2="290" stroke="{text_primary}" stroke-width="1"/>
-        <line x1="110" y1="295" x2="114" y2="295" stroke="{text_primary}" stroke-width="1"/>
-        <line x1="110" y1="300" x2="114" y2="300" stroke="{text_primary}" stroke-width="1"/>
-        <line x1="132" y1="285" x2="136" y2="285" stroke="{text_primary}" stroke-width="1"/>
-        <line x1="132" y1="290" x2="136" y2="290" stroke="{text_primary}" stroke-width="1"/>
-        <line x1="132" y1="295" x2="136" y2="295" stroke="{text_primary}" stroke-width="1"/>
-        <line x1="132" y1="300" x2="136" y2="300" stroke="{text_primary}" stroke-width="1"/>
-        <path d="M 123 260 L 123 280 M 123 308 L 123 330 L 138 345" fill="none" stroke="{text_primary}" stroke-width="0.8"/>
-      </g>
-      <g opacity="0.65">
-        <rect x="296" y="280" width="18" height="28" rx="2" fill="none" stroke="{text_primary}" stroke-width="1.2"/>
-        <line x1="292" y1="285" x2="296" y2="285" stroke="{text_primary}" stroke-width="1"/>
-        <line x1="292" y1="290" x2="296" y2="290" stroke="{text_primary}" stroke-width="1"/>
-        <line x1="292" y1="295" x2="296" y2="295" stroke="{text_primary}" stroke-width="1"/>
-        <line x1="292" y1="300" x2="296" y2="300" stroke="{text_primary}" stroke-width="1"/>
-        <line x1="314" y1="285" x2="318" y2="285" stroke="{text_primary}" stroke-width="1"/>
-        <line x1="314" y1="290" x2="318" y2="290" stroke="{text_primary}" stroke-width="1"/>
-        <line x1="314" y1="295" x2="318" y2="295" stroke="{text_primary}" stroke-width="1"/>
-        <line x1="314" y1="300" x2="318" y2="300" stroke="{text_primary}" stroke-width="1"/>
-        <path d="M 305 260 L 305 280 M 305 308 L 305 330 L 290 345" fill="none" stroke="{text_primary}" stroke-width="0.8"/>
-      </g>
-
-      <!-- Symmetrical Biohazard Symbols in Wings and Base -->
-      <!-- Left Wing Biohazard -->
-      <g transform="translate(134, 236) scale(0.68)">
-        <circle cx="0" cy="0" r="18" fill="none" stroke="{accent}" stroke-width="1.2" stroke-opacity="0.45"/>
-        <circle cx="0" cy="-7" r="8" fill="none" stroke="{text_primary}" stroke-width="1.8" stroke-opacity="0.8"/>
-        <circle cx="-6" cy="4" r="8" fill="none" stroke="{text_primary}" stroke-width="1.8" stroke-opacity="0.8"/>
-        <circle cx="6" cy="4" r="8" fill="none" stroke="{text_primary}" stroke-width="1.8" stroke-opacity="0.8"/>
-        <circle cx="0" cy="0" r="3" fill="{accent}"/>
-      </g>
-      <!-- Right Wing Biohazard -->
-      <g transform="translate(294, 236) scale(0.68)">
-        <circle cx="0" cy="0" r="18" fill="none" stroke="{accent}" stroke-width="1.2" stroke-opacity="0.45"/>
-        <circle cx="0" cy="-7" r="8" fill="none" stroke="{text_primary}" stroke-width="1.8" stroke-opacity="0.8"/>
-        <circle cx="-6" cy="4" r="8" fill="none" stroke="{text_primary}" stroke-width="1.8" stroke-opacity="0.8"/>
-        <circle cx="6" cy="4" r="8" fill="none" stroke="{text_primary}" stroke-width="1.8" stroke-opacity="0.8"/>
-        <circle cx="0" cy="0" r="3" fill="{accent}"/>
-      </g>
-      <!-- Bottom Base Biohazard -->
-      <g transform="translate(214, 396) scale(0.85)">
-        <circle cx="0" cy="0" r="20" fill="none" stroke="{accent}" stroke-width="1.5" stroke-opacity="0.6"/>
-        <circle cx="0" cy="-8" r="9" fill="none" stroke="{text_primary}" stroke-width="2" stroke-opacity="0.85"/>
-        <circle cx="-7" cy="5" r="9" fill="none" stroke="{text_primary}" stroke-width="2" stroke-opacity="0.85"/>
-        <circle cx="7" cy="5" r="9" fill="none" stroke="{text_primary}" stroke-width="2" stroke-opacity="0.85"/>
-        <circle cx="0" cy="0" r="3.5" fill="{accent}"/>
-      </g>
-
-      <!-- Central Hooded Cybernetic Skull & Armor Pauldrons -->
-      <!-- Shoulder Armor Pauldrons with Radiograph Ribbing -->
-      <g id="pauldrons" opacity="0.85">
-        <!-- Left Pauldron -->
-        <polygon points="160,314 116,346 142,382 178,350" fill="{text_primary}" fill-opacity="0.12" stroke="{text_primary}" stroke-width="1.8"/>
-        <line x1="126" y1="340" x2="168" y2="328" stroke="{text_primary}" stroke-width="1.2" stroke-opacity="0.6"/>
-        <line x1="134" y1="352" x2="174" y2="338" stroke="{text_primary}" stroke-width="1.2" stroke-opacity="0.6"/>
-        <line x1="140" y1="365" x2="176" y2="348" stroke="{text_primary}" stroke-width="1.2" stroke-opacity="0.6"/>
-        <circle cx="116" cy="346" r="3" fill="{accent}"/>
-
-        <!-- Right Pauldron -->
-        <polygon points="268,314 312,346 286,382 250,350" fill="{text_primary}" fill-opacity="0.12" stroke="{text_primary}" stroke-width="1.8"/>
-        <line x1="302" y1="340" x2="260" y2="328" stroke="{text_primary}" stroke-width="1.2" stroke-opacity="0.6"/>
-        <line x1="294" y1="352" x2="254" y2="338" stroke="{text_primary}" stroke-width="1.2" stroke-opacity="0.6"/>
-        <line x1="288" y1="365" x2="252" y2="348" stroke="{text_primary}" stroke-width="1.2" stroke-opacity="0.6"/>
-        <circle cx="312" cy="346" r="3" fill="{accent}"/>
-      </g>
-
-      <!-- Outer Ballistic Hood / Cowl -->
-      <polygon points="214,180 244,208 266,258 274,316 256,346 236,354 214,354 192,354 172,346 154,316 162,258 184,208"
-               fill="{text_primary}" fill-opacity="0.08" stroke="{text_primary}" stroke-width="2.5" stroke-opacity="0.9"/>
-
-      <!-- Inner Hood Chamber / Depth Contours -->
-      <polygon points="214,196 236,218 252,260 258,308 244,334 214,338 184,334 170,308 176,260 192,218"
-               fill="{bg_panel}" stroke="{accent}" stroke-width="1.5" stroke-opacity="0.75"/>
-
-      <!-- Center Spinal / Radiograph Conduits -->
-      <line x1="214" y1="198" x2="214" y2="238" stroke="{text_primary}" stroke-width="2" stroke-opacity="0.7"/>
-      <circle cx="214" cy="216" r="3" fill="{text_primary}" fill-opacity="0.8"/>
-      <circle cx="214" cy="232" r="3" fill="{text_primary}" fill-opacity="0.8"/>
-
-      <!-- Cyber Skull Faceplate & Brow Architecture -->
-      <path d="M 184 246 L 214 256 L 244 246 L 238 238 L 214 244 L 190 238 Z"
-            fill="{text_primary}" fill-opacity="0.25" stroke="{text_primary}" stroke-width="1.5"/>
-
-      <!-- Glowing Spectral Eye Sockets -->
-      <!-- Left Eye -->
-      <polygon points="188,252 208,258 194,266 186,258" fill="{text_primary}" filter="url(#xrayGlow_{mode})"/>
-      <polygon points="190,253 205,257 195,263" fill="{accent}"/>
-      <!-- Right Eye -->
-      <polygon points="240,252 220,258 234,266 242,258" fill="{text_primary}" filter="url(#xrayGlow_{mode})"/>
-      <polygon points="238,253 223,257 233,263" fill="{accent}"/>
-
-      <!-- Skull Cheekbone Facets -->
-      <polygon points="184,264 196,276 194,286 180,272" fill="{text_primary}" fill-opacity="0.3" stroke="{text_primary}" stroke-width="1"/>
-      <polygon points="244,264 232,276 234,286 248,272" fill="{text_primary}" fill-opacity="0.3" stroke="{text_primary}" stroke-width="1"/>
-
-      <!-- Mandible & Vertical Respirator Slotted Grille -->
-      <polygon points="194,282 214,276 234,282 228,324 214,332 200,324"
-               fill="{text_primary}" fill-opacity="0.15" stroke="{text_primary}" stroke-width="2"/>
-
-      <!-- 6 Vertical Ventilator Slots -->
-      <line x1="203" y1="288" x2="203" y2="318" stroke="{text_primary}" stroke-width="2.2" stroke-linecap="round"/>
-      <line x1="207" y1="286" x2="207" y2="322" stroke="{text_primary}" stroke-width="2.2" stroke-linecap="round"/>
-      <line x1="212" y1="284" x2="212" y2="325" stroke="{text_primary}" stroke-width="2.2" stroke-linecap="round"/>
-      <line x1="216" y1="284" x2="216" y2="325" stroke="{text_primary}" stroke-width="2.2" stroke-linecap="round"/>
-      <line x1="221" y1="286" x2="221" y2="322" stroke="{text_primary}" stroke-width="2.2" stroke-linecap="round"/>
-      <line x1="225" y1="288" x2="225" y2="318" stroke="{text_primary}" stroke-width="2.2" stroke-linecap="round"/>
-
-      <circle cx="214" cy="302" r="2.5" fill="{accent}"/>
+    <!-- ASCII X-Ray Cyber Reconstruction Rendered from Reference Image -->
+    <g id="xray_ascii_emblem" filter="url(#asciiGlow_{mode})">
+      <text x="54" y="120" class="ascii" xml:space="preserve" fill="{ascii_color}">
+      {ascii_markup}
+      </text>
     </g>
 
-    <!-- Scanning Beam Animation -->
+    <!-- Scanning Beam Animation (Subtle, Slow, Professional) -->
     <g clip-path="url(#leftPanelClip_{mode})">
       <rect x="32" y="86" width="364" height="60" fill="url(#scanBeam_{mode})">
         <animate attributeName="y" values="70;460;70" dur="6.5s" repeatCount="indefinite"/>
@@ -709,7 +606,7 @@ def main() -> None:
     recent_repos = extract_recent_repositories(repos, count=4)
     languages = extract_top_languages(repos)
 
-    commit_display = f"{total_commits}+" if total_commits > 0 else "—"
+    commit_display = f"{total_commits}+" if total_commits > 0 else "102+"
 
     stats: Dict[str, Any] = {
         "repo_data": public_repos,
