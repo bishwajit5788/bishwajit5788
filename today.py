@@ -7,13 +7,16 @@ Generates and maintains the dual-mode cybersecurity technical console
 for dark_mode.svg and light_mode.svg, dynamically fetching real telemetry
 from the GitHub REST API.
 
-Palette (Strict Specification):
-  DARK BACKGROUND:     #1A2517 (Dark Olive)
-  SOURCE BLACK ASCII:  #FFEB93 (Lemon Meringue)
-  SOURCE RED ASCII:    #868B32 (Olive Grove)
-  SOURCE WHITE ASCII:  #FFFFFF (White Highlight)
-  SCANNER / UI ACCENT: #700004 (Dark Garnet)
-  LIGHT BACKGROUND:    #FFEB93 (Lemon Meringue)
+Palette (Semantic Specification):
+  MAIN BACKGROUND:     #2F3A2E (Dark Forest/Slate)
+  BORDER / FRAME:      #700004 (Dark Garnet)
+  SCANNER:             #8D8A84 (Subtle Tech Metallic)
+  ASCII PRIMARY:       #1C1714 (Deep Base Character Ink)
+  ASCII SECONDARY:     #700004 (Structural Red/Garnet Accent)
+  ASCII WHITE SHADING: #FFFFFF (Luminous Highlight Layer)
+  GITHUB INFORMATION:  #FFB35A (Warm Amber Information)
+  PROFILE NAME:        #A9CBEE (Prestige Ice Blue - ONLY Bishwajit Das)
+  TITLE:               #700004 (Dark Garnet Title)
 """
 
 from __future__ import annotations
@@ -72,53 +75,56 @@ if GITHUB_TOKEN:
 DEFAULT_COLS = 319
 DEFAULT_SOURCE = "assets/xray-profile-reference.png"
 DEFAULT_ASCII = "assets/xray-ascii.txt"
-START_X = 55.0
-START_Y = 134.0
-LINE_SPACING = 1.84
-TARGET_WIDTH = 250.0
 
 
 def build_svg_template(mode: str = "dark", ascii_markup: Optional[str] = None) -> str:
     """
     Build the precision technical console SVG for dark or light mode.
-    Strictly constrained to the professional four-color palette.
-    
+    Strictly constrained to the professional semantic palette:
+      - Background:       #2F3A2E (Dark Forest/Slate)
+      - Border / Frame:   #700004 (Dark Garnet)
+      - Scanner:          #8D8A84 (Subtle Tech Metallic)
+      - ASCII Primary:    #1C1714 (Deep Base Character Ink)
+      - ASCII Secondary:  #700004 (Structural Red/Garnet Accent)
+      - ASCII White:      #FFFFFF (Luminous Highlight Layer)
+      - GitHub Info:      #FFB35A (Warm Amber Information)
+      - Profile Name:     #A9CBEE (Prestige Ice Blue - ONLY Bishwajit Das)
+      - Title:            #700004 (Dark Garnet Title)
+
     Layer Hierarchy (Strictly Enforced):
       1. Canvas Background
       2. Technical Grid & Radar Reticles
       3. Physical Scanner Glow & Scanning Beam (Behind ASCII)
-      4. Master Multi-Color ASCII Character Field (Dominant, On Top of Scanner)
+      4. Master 4:3 Native ASCII Character Field (Dominant, On Top of Scanner)
       5. Frame & Interface Details (Borders, Status, Labels)
     """
     is_dark = (mode == "dark")
 
     if is_dark:
-        bg_canvas = "#1A2517"
-        bg_panel = "#1A2517"
-        grid_stroke = "#FFEB93"
-        grid_opacity = "0.035"
-        text_primary = "#FFEB93"
-        text_muted = "#FFEB93"
-        text_muted_op = "0.70"
-        dots_color = "#700004"
-        dots_op = "0.45"
-        accent = "#700004"
-        panel_border_op = "0.45"
-    else:
-        bg_canvas = "#FFEB93"
-        bg_panel = "#FFEB93"
-        grid_stroke = "#1A2517"
+        bg_canvas = "#2F3A2E"
+        bg_panel = "#2F3A2E"
+        grid_stroke = "#8D8A84"
         grid_opacity = "0.04"
-        text_primary = "#1A2517"
-        text_muted = "#1A2517"
-        text_muted_op = "0.75"
-        dots_color = "#700004"
-        dots_op = "0.40"
-        accent = "#700004"
+        border_color = "#700004"
+        scanner_color = "#8D8A84"
+        info_color = "#FFB35A"
+        name_color = "#A9CBEE"
+        title_color = "#700004"
+        panel_border_op = "0.55"
+    else:
+        bg_canvas = "#DCE3D8"
+        bg_panel = "#DCE3D8"
+        grid_stroke = "#8D8A84"
+        grid_opacity = "0.05"
+        border_color = "#700004"
+        scanner_color = "#8D8A84"
+        info_color = "#8A4800"
+        name_color = "#174E82"
+        title_color = "#700004"
         panel_border_op = "0.55"
 
     if ascii_markup is None:
-        ascii_markup = '<tspan x="55.0" y="300.0">[RECON MATRIX ACTIVE]</tspan>'
+        ascii_markup = '<tspan x="105.0" y="384.0">[RECON MATRIX ACTIVE]</tspan>'
 
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 600" width="100%" height="100%">
@@ -134,34 +140,34 @@ def build_svg_template(mode: str = "dark", ascii_markup: Optional[str] = None) -
       <line x1="0" y1="0" x2="4" y2="0" stroke="{grid_stroke}" stroke-opacity="{float(grid_opacity)*0.6:.4f}" stroke-width="1"/>
     </pattern>
 
-    <!-- Physical Scanning Beam Gradients (Strictly #700004 with Opacity Variations) -->
+    <!-- Physical Scanning Beam Gradients (Strictly #8D8A84 with Opacity Variations) -->
     <!-- 1. Soft Wide Glow (90px height) -->
     <linearGradient id="scanGlowWide_{mode}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#700004" stop-opacity="0"/>
-      <stop offset="25%" stop-color="#700004" stop-opacity="0.05"/>
-      <stop offset="50%" stop-color="#700004" stop-opacity="0.10"/>
-      <stop offset="75%" stop-color="#700004" stop-opacity="0.05"/>
-      <stop offset="100%" stop-color="#700004" stop-opacity="0"/>
+      <stop offset="0%" stop-color="{scanner_color}" stop-opacity="0"/>
+      <stop offset="25%" stop-color="{scanner_color}" stop-opacity="0.06"/>
+      <stop offset="50%" stop-color="{scanner_color}" stop-opacity="0.12"/>
+      <stop offset="75%" stop-color="{scanner_color}" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="{scanner_color}" stop-opacity="0"/>
     </linearGradient>
 
     <!-- 2. Medium Glow (38px height) -->
     <linearGradient id="scanGlowMed_{mode}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#700004" stop-opacity="0"/>
-      <stop offset="20%" stop-color="#700004" stop-opacity="0.12"/>
-      <stop offset="50%" stop-color="#700004" stop-opacity="0.28"/>
-      <stop offset="80%" stop-color="#700004" stop-opacity="0.12"/>
-      <stop offset="100%" stop-color="#700004" stop-opacity="0"/>
+      <stop offset="0%" stop-color="{scanner_color}" stop-opacity="0"/>
+      <stop offset="20%" stop-color="{scanner_color}" stop-opacity="0.15"/>
+      <stop offset="50%" stop-color="{scanner_color}" stop-opacity="0.32"/>
+      <stop offset="80%" stop-color="{scanner_color}" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="{scanner_color}" stop-opacity="0"/>
     </linearGradient>
 
     <!-- 3. Core Aura Falloff (12px height) -->
     <linearGradient id="scanGlowCore_{mode}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#700004" stop-opacity="0"/>
-      <stop offset="35%" stop-color="#700004" stop-opacity="0.30"/>
-      <stop offset="47%" stop-color="#700004" stop-opacity="0.60"/>
-      <stop offset="50%" stop-color="#700004" stop-opacity="0.90"/>
-      <stop offset="53%" stop-color="#700004" stop-opacity="0.60"/>
-      <stop offset="65%" stop-color="#700004" stop-opacity="0.30"/>
-      <stop offset="100%" stop-color="#700004" stop-opacity="0"/>
+      <stop offset="0%" stop-color="{scanner_color}" stop-opacity="0"/>
+      <stop offset="35%" stop-color="{scanner_color}" stop-opacity="0.35"/>
+      <stop offset="47%" stop-color="{scanner_color}" stop-opacity="0.65"/>
+      <stop offset="50%" stop-color="{scanner_color}" stop-opacity="0.90"/>
+      <stop offset="53%" stop-color="{scanner_color}" stop-opacity="0.65"/>
+      <stop offset="65%" stop-color="{scanner_color}" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="{scanner_color}" stop-opacity="0"/>
     </linearGradient>
 
     <!-- Scope Clip Path to ensure beam remains strictly within internal monitor -->
@@ -173,22 +179,22 @@ def build_svg_template(mode: str = "dark", ascii_markup: Optional[str] = None) -
   <style>
     .mono {{ font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, "Roboto Mono", monospace; }}
     .ascii {{
-      font-family: "JetBrains Mono", Consolas, "SFMono-Regular", Menlo, Monaco, "Courier New", monospace;
-      font-size: 1.75px;
+      font-family: "JetBrains Mono", Consolas, "SFMono-Regular", Menlo, Monaco, monospace;
+      font-size: 7.5px;
       font-weight: 700;
       white-space: pre;
     }}
-    .title {{ font-size: 20px; font-weight: 700; fill: {text_primary}; }}
-    .headline {{ font-size: 13.5px; font-weight: 600; fill: {text_primary}; letter-spacing: 0.5px; }}
-    .desc {{ font-size: 12px; fill: {text_muted}; fill-opacity: {text_muted_op}; }}
-    .label {{ font-size: 12px; font-weight: 600; fill: {accent}; }}
-    .dots {{ font-size: 12px; fill: {dots_color}; fill-opacity: {dots_op}; letter-spacing: 1px; }}
-    .val {{ font-size: 12px; fill: {text_primary}; }}
-    .val-num {{ font-size: 13.5px; font-weight: 700; fill: {text_primary}; }}
-    .sec-rule {{ font-size: 12px; font-weight: 600; fill: {accent}; letter-spacing: -0.5px; }}
-    .meta-tag {{ font-size: 9.5px; font-weight: 600; fill: {text_primary}; fill-opacity: 0.75; letter-spacing: 1px; }}
-    .status-text {{ font-size: 10px; font-weight: 700; fill: {accent}; letter-spacing: 1.5px; }}
-    .footer-meta {{ font-size: 9.5px; fill: {text_muted}; fill-opacity: 0.45; letter-spacing: 1px; }}
+    .profile-name {{ font-size: 20px; font-weight: 700; fill: {name_color}; }}
+    .profile-title {{ font-size: 13.5px; font-weight: 600; fill: {title_color}; letter-spacing: 0.5px; }}
+    .desc {{ font-size: 12px; fill: {info_color}; fill-opacity: 0.82; }}
+    .label {{ font-size: 12px; font-weight: 600; fill: {info_color}; }}
+    .dots {{ font-size: 12px; fill: {info_color}; fill-opacity: 0.40; letter-spacing: 1px; }}
+    .val {{ font-size: 12px; fill: {info_color}; }}
+    .val-num {{ font-size: 13.5px; font-weight: 700; fill: {info_color}; }}
+    .sec-rule {{ font-size: 12px; font-weight: 600; fill: {border_color}; letter-spacing: -0.5px; }}
+    .meta-tag {{ font-size: 9.5px; font-weight: 600; fill: {info_color}; fill-opacity: 0.85; letter-spacing: 1px; }}
+    .status-text {{ font-size: 10px; font-weight: 700; fill: {border_color}; letter-spacing: 1.5px; }}
+    .footer-meta {{ font-size: 9.5px; fill: {info_color}; fill-opacity: 0.65; letter-spacing: 1px; }}
   </style>
 
   <!-- Canvas Background -->
@@ -197,13 +203,13 @@ def build_svg_template(mode: str = "dark", ascii_markup: Optional[str] = None) -
   <rect width="1060" height="600" fill="url(#scanlines_{mode})"/>
 
   <!-- Outer Master Chassis Frame -->
-  <rect x="16" y="16" width="1028" height="568" rx="8" fill="none" stroke="{accent}" stroke-width="1.5" stroke-opacity="{panel_border_op}"/>
+  <rect x="16" y="16" width="1028" height="568" rx="8" fill="none" stroke="{border_color}" stroke-width="1.5" stroke-opacity="0.65"/>
 
   <!-- Outer Corner Reinforcement Brackets -->
-  <path d="M 16 36 L 16 16 L 36 16" fill="none" stroke="{accent}" stroke-width="3"/>
-  <path d="M 1024 16 L 1044 16 L 1044 36" fill="none" stroke="{accent}" stroke-width="3"/>
-  <path d="M 16 564 L 16 584 L 36 584" fill="none" stroke="{accent}" stroke-width="3"/>
-  <path d="M 1024 584 L 1044 584 L 1044 564" fill="none" stroke="{accent}" stroke-width="3"/>
+  <path d="M 16 36 L 16 16 L 36 16" fill="none" stroke="{border_color}" stroke-width="3"/>
+  <path d="M 1024 16 L 1044 16 L 1044 36" fill="none" stroke="{border_color}" stroke-width="3"/>
+  <path d="M 16 564 L 16 584 L 36 584" fill="none" stroke="{border_color}" stroke-width="3"/>
+  <path d="M 1024 584 L 1044 584 L 1044 564" fill="none" stroke="{border_color}" stroke-width="3"/>
 
   <!-- Top Frame Coordinates & Status -->
   <text x="42" y="28" class="mono meta-tag">CONSOLE // RED-TEAM RECON STATION</text>
@@ -214,17 +220,17 @@ def build_svg_template(mode: str = "dark", ascii_markup: Optional[str] = None) -
   <!-- ============================================================ -->
   <g id="left_panel">
     <!-- 1. Left Panel Housing -->
-    <rect x="32" y="32" width="364" height="536" rx="6" fill="{bg_panel}" stroke="{accent}" stroke-width="1.2" stroke-opacity="{panel_border_op}"/>
+    <rect x="32" y="32" width="364" height="536" rx="6" fill="{bg_panel}" stroke="{border_color}" stroke-width="1.2" stroke-opacity="{panel_border_op}"/>
 
     <!-- 2. Technical Grid & Radar Reticles (Behind Scanner & ASCII) -->
     <g id="technical_grid">
       <rect x="42" y="86" width="344" height="428" fill="url(#techGrid_{mode})"/>
       <rect x="42" y="86" width="344" height="428" fill="url(#scanlines_{mode})"/>
-      <circle cx="214" cy="300" r="150" fill="none" stroke="{accent}" stroke-width="0.7" stroke-opacity="0.22" stroke-dasharray="2 6"/>
-      <circle cx="214" cy="300" r="106" fill="none" stroke="{text_primary}" stroke-width="0.7" stroke-opacity="0.10"/>
-      <circle cx="214" cy="300" r="66" fill="none" stroke="{accent}" stroke-width="0.7" stroke-opacity="0.25" stroke-dasharray="3 4"/>
-      <line x1="48" y1="300" x2="380" y2="300" stroke="{accent}" stroke-width="0.7" stroke-opacity="0.25" stroke-dasharray="4 4"/>
-      <line x1="214" y1="92" x2="214" y2="508" stroke="{accent}" stroke-width="0.7" stroke-opacity="0.25" stroke-dasharray="4 4"/>
+      <circle cx="214" cy="300" r="150" fill="none" stroke="{border_color}" stroke-width="0.7" stroke-opacity="0.22" stroke-dasharray="2 6"/>
+      <circle cx="214" cy="300" r="106" fill="none" stroke="{border_color}" stroke-width="0.7" stroke-opacity="0.10"/>
+      <circle cx="214" cy="300" r="66" fill="none" stroke="{border_color}" stroke-width="0.7" stroke-opacity="0.25" stroke-dasharray="3 4"/>
+      <line x1="48" y1="300" x2="380" y2="300" stroke="{border_color}" stroke-width="0.7" stroke-opacity="0.25" stroke-dasharray="4 4"/>
+      <line x1="214" y1="92" x2="214" y2="508" stroke="{border_color}" stroke-width="0.7" stroke-opacity="0.25" stroke-dasharray="4 4"/>
     </g>
 
     <!-- 3. SCANNER GLOW & SCANNING BEAM (BEHIND ASCII CHARACTER FIELD) -->
@@ -237,10 +243,10 @@ def build_svg_template(mode: str = "dark", ascii_markup: Optional[str] = None) -
         <!-- Layer 3: Controlled core falloff -->
         <rect x="42" y="-6" width="344" height="12" fill="url(#scanGlowCore_{mode})"/>
         <!-- Layer 4: Thin bright scanning core -->
-        <rect x="42" y="-1" width="344" height="2" fill="#700004" fill-opacity="0.88"/>
+        <rect x="42" y="-1" width="344" height="2" fill="{scanner_color}" fill-opacity="0.88"/>
         <!-- Beam Edge Locator Ticks -->
-        <line x1="42" y1="0" x2="52" y2="0" stroke="#700004" stroke-width="1.8" stroke-opacity="0.95"/>
-        <line x1="376" y1="0" x2="386" y2="0" stroke="#700004" stroke-width="1.8" stroke-opacity="0.95"/>
+        <line x1="42" y1="0" x2="52" y2="0" stroke="{scanner_color}" stroke-width="1.8" stroke-opacity="0.95"/>
+        <line x1="376" y1="0" x2="386" y2="0" stroke="{scanner_color}" stroke-width="1.8" stroke-opacity="0.95"/>
 
         <!-- Smooth vertical scan motion: 10s indefinite linear loop (top -> bottom -> top) -->
         <animateTransform
@@ -253,46 +259,49 @@ def build_svg_template(mode: str = "dark", ascii_markup: Optional[str] = None) -
       </g>
     </g>
 
-    <!-- 4. ENLARGED COLOR-AWARE ASCII FIELD (RENDERED ON TOP OF SCANNER) -->
+    <!-- 4. MASTER 4:3 NATIVE ASCII FIELD (RENDERED ON TOP OF SCANNER) -->
+    <!-- Native 4:3 Viewport: 320px x 240px (93% usable width), centered at x=54, y=180 -->
     <g id="ascii_layer">
-      <text x="{START_X:.1f}" y="{START_Y:.1f}" class="ascii" xml:space="preserve">
-        {ascii_markup}
-      </text>
+      <svg x="54" y="180" width="320" height="240" viewBox="0 0 1024 768" preserveAspectRatio="xMidYMid meet">
+        <text class="ascii" xml:space="preserve">
+          {ascii_markup}
+        </text>
+      </svg>
     </g>
 
     <!-- 5. FRAME / SCOPE OVERLAYS / UI DETAILS (FRAMING THE FIELD) -->
     <g id="interface_layer">
       <!-- Internal Scope Dashed Border -->
-      <rect x="42" y="86" width="344" height="428" rx="4" fill="none" stroke="{accent}" stroke-width="1.2" stroke-opacity="0.38" stroke-dasharray="4 4"/>
+      <rect x="42" y="86" width="344" height="428" rx="4" fill="none" stroke="{border_color}" stroke-width="1.2" stroke-opacity="0.45" stroke-dasharray="4 4"/>
       <!-- Reticle Corner Precision Brackets -->
-      <path d="M 48 98 L 48 92 L 54 92" fill="none" stroke="{accent}" stroke-width="1.6"/>
-      <path d="M 380 98 L 380 92 L 374 92" fill="none" stroke="{accent}" stroke-width="1.6"/>
-      <path d="M 48 502 L 48 508 L 54 508" fill="none" stroke="{accent}" stroke-width="1.6"/>
-      <path d="M 380 502 L 380 508 L 374 508" fill="none" stroke="{accent}" stroke-width="1.6"/>
+      <path d="M 48 98 L 48 92 L 54 92" fill="none" stroke="{border_color}" stroke-width="1.6"/>
+      <path d="M 380 98 L 380 92 L 374 92" fill="none" stroke="{border_color}" stroke-width="1.6"/>
+      <path d="M 48 502 L 48 508 L 54 508" fill="none" stroke="{border_color}" stroke-width="1.6"/>
+      <path d="M 380 502 L 380 508 L 374 508" fill="none" stroke="{border_color}" stroke-width="1.6"/>
 
       <!-- Header Badges -->
-      <rect x="42" y="42" width="168" height="22" rx="3" fill="{accent}" fill-opacity="0.18" stroke="{accent}" stroke-width="1"/>
-      <text x="48" y="57" class="mono" font-size="10px" font-weight="700" fill="{accent}" letter-spacing="1px">THREAT SURFACE // RECON</text>
+      <rect x="42" y="42" width="168" height="22" rx="3" fill="{border_color}" fill-opacity="0.18" stroke="{border_color}" stroke-width="1"/>
+      <text x="48" y="57" class="mono" font-size="10px" font-weight="700" fill="{info_color}" letter-spacing="1px">THREAT SURFACE // RECON</text>
 
-      <rect x="316" y="42" width="70" height="22" rx="3" fill="{accent}" fill-opacity="0.18" stroke="{accent}" stroke-width="1"/>
-      <text x="351" y="57" text-anchor="middle" class="mono" font-size="10px" font-weight="700" fill="{text_primary}">NODE_01</text>
+      <rect x="316" y="42" width="70" height="22" rx="3" fill="{border_color}" fill-opacity="0.18" stroke="{border_color}" stroke-width="1"/>
+      <text x="351" y="57" text-anchor="middle" class="mono" font-size="10px" font-weight="700" fill="{info_color}">NODE_01</text>
 
       <!-- Sub-header Telemetry -->
       <text x="44" y="78" class="mono meta-tag">LAT 28.6139° N / LON 77.2090° E</text>
       <text x="384" y="78" text-anchor="end" class="mono meta-tag">FREQ: 2.4/5.8 GHz</text>
 
       <!-- Footer / Telemetry Status -->
-      <line x1="42" y1="520" x2="386" y2="520" stroke="{accent}" stroke-width="1" stroke-opacity="0.4"/>
-      <text x="44" y="536" class="mono meta-tag">THREAT SIGNATURE // VISUAL MAP</text>
+      <line x1="42" y1="520" x2="386" y2="520" stroke="{border_color}" stroke-width="1" stroke-opacity="0.45"/>
+      <text x="44" y="536" class="mono meta-tag">THREAT SIGNATURE // VISUAL MAP (4:3 NATIVE)</text>
 
       <!-- Pulsing Scan Active Beacon -->
-      <circle cx="50" cy="552" r="4.5" fill="{accent}">
+      <circle cx="50" cy="552" r="4.5" fill="{border_color}">
         <animate attributeName="opacity" values="1;0.35;1" dur="2s" repeatCount="indefinite"/>
       </circle>
       <text x="62" y="556" class="mono status-text">SCAN STATUS // ACTIVE</text>
 
       <!-- RF Waveform / Telemetry Signal Bars -->
-      <g transform="translate(322, 544)" fill="{accent}" opacity="0.8">
+      <g transform="translate(322, 544)" fill="{border_color}" opacity="0.85">
         <rect x="0" y="8" width="3" height="4" rx="1"/>
         <rect x="5" y="5" width="3" height="7" rx="1"/>
         <rect x="10" y="2" width="3" height="10" rx="1"/>
@@ -312,31 +321,31 @@ def build_svg_template(mode: str = "dark", ascii_markup: Optional[str] = None) -
   <!-- ============================================================ -->
   <g id="right_panel" class="mono">
     <!-- Panel Housing -->
-    <rect x="416" y="32" width="612" height="536" rx="6" fill="{bg_panel}" stroke="{accent}" stroke-width="1.2" stroke-opacity="{panel_border_op}"/>
+    <rect x="416" y="32" width="612" height="536" rx="6" fill="{bg_panel}" stroke="{border_color}" stroke-width="1.2" stroke-opacity="{panel_border_op}"/>
 
     <!-- Technical Framing Corner Brackets -->
-    <path d="M 426 48 L 426 40 L 434 40" fill="none" stroke="{accent}" stroke-width="2.5"/>
-    <path d="M 1018 48 L 1018 40 L 1010 40" fill="none" stroke="{accent}" stroke-width="2.5"/>
-    <path d="M 426 552 L 426 560 L 434 560" fill="none" stroke="{accent}" stroke-width="2.5"/>
-    <path d="M 1018 552 L 1018 560 L 1010 560" fill="none" stroke="{accent}" stroke-width="2.5"/>
+    <path d="M 426 48 L 426 40 L 434 40" fill="none" stroke="{border_color}" stroke-width="2.5"/>
+    <path d="M 1018 48 L 1018 40 L 1010 40" fill="none" stroke="{border_color}" stroke-width="2.5"/>
+    <path d="M 426 552 L 426 560 L 434 560" fill="none" stroke="{border_color}" stroke-width="2.5"/>
+    <path d="M 1018 552 L 1018 560 L 1010 560" fill="none" stroke="{border_color}" stroke-width="2.5"/>
 
     <!-- 1. Identity Line -->
     <g transform="translate(436, 66)">
       <text x="0" y="0" class="label" font-size="16px">$ whoami</text>
-      <text x="82" y="0" fill="{accent}" font-size="16px">→</text>
-      <text x="104" y="0" class="title">Bishwajit Das</text>
-      <line x1="262" y1="-6" x2="572" y2="-6" stroke="{accent}" stroke-width="1.2" stroke-opacity="0.5"/>
+      <text x="82" y="0" fill="{border_color}" font-size="16px">→</text>
+      <text x="104" y="0" class="profile-name">Bishwajit Das</text>
+      <line x1="262" y1="-6" x2="572" y2="-6" stroke="{border_color}" stroke-width="1.2" stroke-opacity="0.5"/>
     </g>
 
     <!-- 2. Primary Title / Headline -->
-    <text x="436" y="96" class="headline">Cybersecurity • Embedded Systems • Red Team Research</text>
+    <text x="436" y="96" class="profile-title">Cybersecurity • Embedded Systems • Red Team Research</text>
 
     <!-- 3. Supporting Description -->
     <text x="436" y="118" class="desc">Building hardware/software security projects, embedded systems,</text>
     <text x="436" y="136" class="desc">wireless research tools, and isolated security research sandboxes.</text>
 
     <!-- Section Separator Line -->
-    <line x1="436" y1="152" x2="1008" y2="152" stroke="{accent}" stroke-width="1" stroke-opacity="0.3"/>
+    <line x1="436" y1="152" x2="1008" y2="152" stroke="{border_color}" stroke-width="1" stroke-opacity="0.35"/>
 
     <!-- 4. Technical Build Matrix -->
     <!-- Row: Builds -->
@@ -444,7 +453,7 @@ def build_svg_template(mode: str = "dark", ascii_markup: Optional[str] = None) -
     </g>
 
     <!-- System Footer Metadata -->
-    <line x1="436" y1="518" x2="1008" y2="518" stroke="{accent}" stroke-width="1" stroke-opacity="0.3"/>
+    <line x1="436" y1="518" x2="1008" y2="518" stroke="{border_color}" stroke-width="1" stroke-opacity="0.35"/>
     <text x="436" y="538" class="footer-meta">ARCH: EMBEDDED-X86 // RADIO: MULTI-BAND // AUTH: VERIFIED SECURE</text>
     <text x="1008" y="538" text-anchor="end" class="footer-meta">STATUS: OPERATIONAL</text>
   </g>
@@ -650,18 +659,10 @@ def main() -> None:
     # Format markup for dark and light modes
     dark_ascii_markup = format_color_svg_tspans(
         matrix=matrix,
-        start_x=START_X,
-        start_y=START_Y,
-        line_spacing=LINE_SPACING,
-        target_width=TARGET_WIDTH,
         is_light=False,
     )
     light_ascii_markup = format_color_svg_tspans(
         matrix=matrix,
-        start_x=START_X,
-        start_y=START_Y,
-        line_spacing=LINE_SPACING,
-        target_width=TARGET_WIDTH,
         is_light=True,
     )
 

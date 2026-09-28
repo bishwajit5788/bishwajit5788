@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 """
-xray_ascii.py - Precision Master ASCII Art Integration & Color Mapping Engine
-Preserves the exact visual geometry of the master ASCII artwork and maps
-source colors (Black, Red, White) from the reference image.
+xray_ascii.py - Precision Master ASCII Art Integration & Semantic Color Engine
+Preserves the exact visual geometry of the master ASCII artwork in native 4:3 aspect ratio,
+mapping source colors to the refined semantic palette:
+  - Background:       #2F3A2E (Dark Forest/Slate)
+  - Border / Frame:   #700004 (Dark Garnet)
+  - Scanner:          #8D8A84 (Subtle Tech Metallic)
+  - ASCII Primary:    #1C1714 (Deep Base Character Ink)
+  - ASCII Secondary:  #700004 (Structural Red/Garnet Accent)
+  - ASCII White:      #FFFFFF (Luminous Highlight Layer)
+  - GitHub Info:      #FFB35A (Warm Amber Information)
+  - Profile Name:     #A9CBEE (Prestige Ice Blue)
+  - Title:            #700004 (Dark Garnet Title)
 
 Author: Bishwajit Das (bishwajit5788)
-
-Color Specification (Strict):
-  SOURCE BLACK -> #FFEB93 (Lemon Meringue)
-  SOURCE RED   -> #868B32 (Olive Grove)
-  SOURCE WHITE -> #FFFFFF (White Highlight Layer)
-  UI / SCANNER -> #700004 (Dark Garnet)
-  BACKGROUND   -> #1A2517 (Dark Olive)
 """
 
 from __future__ import annotations
@@ -22,20 +24,20 @@ import os
 import struct
 import sys
 import zlib
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
-# Exact mapped color definitions
+# Exact semantic color definitions
 COLOR_MAP = {
-    "black": "#FFEB93",  # Lemon Meringue
-    "red": "#868B32",    # Olive Grove
-    "white": "#FFFFFF",  # Pure White Highlight
+    "black": "#1C1714",  # ASCII Primary (Deep base structure)
+    "red": "#700004",    # ASCII Secondary (Garnet structural layer)
+    "white": "#FFFFFF",  # ASCII White Highlight Shading
 }
 
-# Light mode color mappings ensuring contrast
+# Light mode preserves the exact semantic roles
 COLOR_MAP_LIGHT = {
-    "black": "#1A2517",  # Dark Olive (high contrast against light background)
-    "red": "#868B32",    # Olive Grove
-    "white": "#700004",  # Dark Garnet accent highlight for light mode
+    "black": "#1C1714",  # High contrast crisp dark character structure
+    "red": "#700004",    # Structural garnet
+    "white": "#FFFFFF",  # White highlight
 }
 
 ASCII_TEXT_PATH = "assets/xray-ascii.txt"
@@ -43,7 +45,7 @@ COLOR_SOURCE_PATH = "assets/xray-profile-reference.png"
 
 
 def load_master_ascii_lines(text_path: str = ASCII_TEXT_PATH) -> List[str]:
-    """Load the master ASCII text lines, ensuring uniform padded width."""
+    """Load master ASCII text lines, ensuring uniform padded width."""
     if not os.path.exists(text_path):
         raise FileNotFoundError(f"Master ASCII text file not found: {text_path}")
     with open(text_path, "r", encoding="utf-8") as f:
@@ -177,7 +179,7 @@ def sample_patch_rgb(
 
 
 def classify_source_color(cr: float, cg: float, cb: float) -> str:
-    """Classify sampled RGB into one of the three primary source groups: white, red, black."""
+    """Classify sampled RGB into one of three primary source groups: white, red, black."""
     # White highlight layer: high brightness across channels
     if cr > 175 and cg > 175 and cb > 175:
         return "white"
@@ -247,21 +249,22 @@ def export_ascii_text(matrix: List[List[Tuple[str, str]]]) -> str:
 
 def format_color_svg_tspans(
     matrix: List[List[Tuple[str, str]]],
-    start_x: float = 55.0,
-    start_y: float = 134.0,
-    line_spacing: float = 1.84,
-    target_width: float = 250.0,
     is_light: bool = False,
+    *args: Any,
+    **kwargs: Any,
 ) -> str:
     """
-    Format the multi-colored character matrix into optimized SVG <tspan> elements.
+    Format multi-colored character matrix into optimized SVG <tspan> rows
+    for 4:3 native viewBox="0 0 1024 768".
     Contiguous characters of the same color are grouped into compact runs.
     """
     color_palette = COLOR_MAP_LIGHT if is_light else COLOR_MAP
     lines_markup: List[str] = []
+    num_rows = len(matrix)
+    line_pitch = 763.0 / (num_rows - 1) if num_rows > 1 else 4.25
 
     for r, row in enumerate(matrix):
-        curr_y = start_y + (r * line_spacing)
+        curr_y = 3.0 + (r * line_pitch) + (line_pitch * 0.82)
         current_color_key: Optional[str] = None
         current_chars: List[str] = []
         row_tspans: List[str] = []
@@ -299,20 +302,20 @@ def format_color_svg_tspans(
 
         line_content = "".join(row_tspans)
         lines_markup.append(
-            f'<tspan x="{start_x:.1f}" y="{curr_y:.2f}" textLength="{target_width:.1f}" lengthAdjust="spacingAndGlyphs">{line_content}</tspan>'
+            f'<tspan x="105.0" y="{curr_y:.2f}" textLength="814.0" lengthAdjust="spacingAndGlyphs">{line_content}</tspan>'
         )
 
-    return "\n        ".join(lines_markup)
+    return "\n          ".join(lines_markup)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Master ASCII Character Field Generator")
+    parser = argparse.ArgumentParser(description="Master 4:3 ASCII Character Field Generator")
     parser.add_argument("--source", default=COLOR_SOURCE_PATH, help="Color reference image path")
     parser.add_argument("--ascii", default=ASCII_TEXT_PATH, help="Master ASCII text file path")
     parser.add_argument("--export-text", action="store_true", help="Export to plain text")
     args = parser.parse_args()
 
-    print(f"[INFO] Generating master ASCII matrix from {args.ascii} with colors from {args.source}...")
+    print(f"[INFO] Generating master 4:3 ASCII matrix from {args.ascii} with colors from {args.source}...")
     cols, rows, matrix = generate_color_aware_ascii(
         file_path=args.source,
         ascii_path=args.ascii,
