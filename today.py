@@ -68,13 +68,14 @@ HEADERS: Dict[str, str] = {
 if GITHUB_TOKEN:
     HEADERS["Authorization"] = f"Bearer {GITHUB_TOKEN}"
 
-# Parameters for enlarged, dominant ASCII artwork in Left Panel
-DEFAULT_COLS = 84
-DEFAULT_ASPECT = 0.58
+# Parameters for master ASCII artwork in Left Panel
+DEFAULT_COLS = 319
 DEFAULT_SOURCE = "assets/xray-profile-reference.png"
-START_X = 62.8
-START_Y = 128.5
-LINE_SPACING = 7.0
+DEFAULT_ASCII = "assets/xray-ascii.txt"
+START_X = 55.0
+START_Y = 134.0
+LINE_SPACING = 1.84
+TARGET_WIDTH = 250.0
 
 
 def build_svg_template(mode: str = "dark", ascii_markup: Optional[str] = None) -> str:
@@ -86,7 +87,7 @@ def build_svg_template(mode: str = "dark", ascii_markup: Optional[str] = None) -
       1. Canvas Background
       2. Technical Grid & Radar Reticles
       3. Physical Scanner Glow & Scanning Beam (Behind ASCII)
-      4. Large Multi-Color ASCII Character Field (Dominant, On Top of Scanner)
+      4. Master Multi-Color ASCII Character Field (Dominant, On Top of Scanner)
       5. Frame & Interface Details (Borders, Status, Labels)
     """
     is_dark = (mode == "dark")
@@ -117,7 +118,7 @@ def build_svg_template(mode: str = "dark", ascii_markup: Optional[str] = None) -
         panel_border_op = "0.55"
 
     if ascii_markup is None:
-        ascii_markup = '<tspan x="62.8" y="300.0">[RECON MATRIX ACTIVE]</tspan>'
+        ascii_markup = '<tspan x="55.0" y="300.0">[RECON MATRIX ACTIVE]</tspan>'
 
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 600" width="100%" height="100%">
@@ -173,7 +174,7 @@ def build_svg_template(mode: str = "dark", ascii_markup: Optional[str] = None) -
     .mono {{ font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, "Roboto Mono", monospace; }}
     .ascii {{
       font-family: "JetBrains Mono", Consolas, "SFMono-Regular", Menlo, Monaco, "Courier New", monospace;
-      font-size: 6.2px;
+      font-size: 1.75px;
       font-weight: 700;
       white-space: pre;
     }}
@@ -360,7 +361,7 @@ def build_svg_template(mode: str = "dark", ascii_markup: Optional[str] = None) -
     <g transform="translate(436, 239)">
       <text x="0" y="0" class="label">Tools:</text>
       <text x="95" y="0" class="dots">................</text>
-      <text x="180" y="0" class="val">ESP-IDF, Arduino IDE, PlatformIO, Blender, VS Code</text>
+      <text x="180" y="0" class="val">Blender, Arduino IDE, VS Code</text>
     </g>
 
     <!-- Row: Languages -->
@@ -639,19 +640,12 @@ def main() -> None:
     print(f"[INFO] Synchronizing GitHub profile statistics for user '{USER_NAME}'...")
 
     # Generate Color-Aware ASCII character matrix (Source Black -> #FFEB93, Red -> #868B32, White -> #FFFFFF)
-    print(f"[INFO] Generating enlarged color-aware character matrix (cols={args.cols}, mode='{args.mode}')...")
+    print(f"[INFO] Generating master color-aware ASCII character matrix from {DEFAULT_ASCII}...")
     cols, rows, matrix = generate_color_aware_ascii(
         file_path=DEFAULT_SOURCE,
-        cols=args.cols,
-        char_aspect=DEFAULT_ASPECT,
-        mode=args.mode,
+        ascii_path=DEFAULT_ASCII,
     )
-
-    # Save reproducible plain text representation to assets/xray-ascii.txt
-    text_content = export_ascii_text(matrix)
-    with open("assets/xray-ascii.txt", "w", encoding="utf-8") as f:
-        f.write(text_content + "\n")
-    print(f"[OK] Saved {cols}x{rows} ASCII matrix to assets/xray-ascii.txt")
+    print(f"[OK] Master ASCII matrix loaded ({cols}x{rows} cells).")
 
     # Format markup for dark and light modes
     dark_ascii_markup = format_color_svg_tspans(
@@ -659,6 +653,7 @@ def main() -> None:
         start_x=START_X,
         start_y=START_Y,
         line_spacing=LINE_SPACING,
+        target_width=TARGET_WIDTH,
         is_light=False,
     )
     light_ascii_markup = format_color_svg_tspans(
@@ -666,6 +661,7 @@ def main() -> None:
         start_x=START_X,
         start_y=START_Y,
         line_spacing=LINE_SPACING,
+        target_width=TARGET_WIDTH,
         is_light=True,
     )
 
