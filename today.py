@@ -3,27 +3,32 @@
 today.py - Automated GitHub Profile Interface Generator & Telemetry Synchronizer
 Author: Bishwajit Das (bishwajit5788)
 
-Generates and maintains the dual-mode cybersecurity X-ray visual profile
+Generates and maintains the dual-mode cybersecurity technical console
 for dark_mode.svg and light_mode.svg, dynamically fetching real telemetry
 from the GitHub REST API.
 
 Palette (Strict Specification):
-  #FEFACD (Lemon Chiffon)
-  #1A2517 (Dark Olive)
-  #700004 (Dark Garnet)
+  DARK BACKGROUND:     #1A2517 (Dark Olive)
+  SOURCE BLACK ASCII:  #FFEB93 (Lemon Meringue)
+  SOURCE RED ASCII:    #868B32 (Olive Grove)
+  SOURCE WHITE ASCII:  #FFFFFF (White Highlight)
+  SCANNER / UI ACCENT: #700004 (Dark Garnet)
+  LIGHT BACKGROUND:    #FFEB93 (Lemon Meringue)
 """
 
 from __future__ import annotations
 
 import argparse
 import html
+import json
 import os
 import re
+import ssl
 import sys
 import tempfile
 import xml.etree.ElementTree as ET
-import json
-import ssl
+from typing import Any, Dict, List, Optional, Tuple
+
 try:
     import requests
     HAS_REQUESTS = True
@@ -45,7 +50,11 @@ def safe_urlopen(req: Any, timeout: int = 15) -> Any:
         raise
 
 
-from assets.xray_ascii import format_svg_tspans, generate_ascii_field
+from assets.xray_ascii import (
+    export_ascii_text,
+    format_color_svg_tspans,
+    generate_color_aware_ascii,
+)
 
 USER_NAME = os.environ.get("USER_NAME", "bishwajit5788")
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN") or os.environ.get("ACCESS_TOKEN") or ""
@@ -59,64 +68,25 @@ HEADERS: Dict[str, str] = {
 if GITHUB_TOKEN:
     HEADERS["Authorization"] = f"Bearer {GITHUB_TOKEN}"
 
-# Default parameters for character matrix generation
-DEFAULT_COLS = 125
-DEFAULT_ASPECT = 0.55
+# Parameters for enlarged, dominant ASCII artwork in Left Panel
+DEFAULT_COLS = 84
+DEFAULT_ASPECT = 0.58
 DEFAULT_SOURCE = "assets/xray-profile-reference.png"
-
-
-def get_cached_ascii_markup(mode: str = "dark", cols: int = DEFAULT_COLS) -> str:
-    """
-    Generate or retrieve the dense ASCII matrix from the source image.
-    Compensates for monospace font aspect ratio and generates compact <tspan> rows.
-    """
-    accent_color = "#700004"
-    if os.path.exists(DEFAULT_SOURCE):
-        try:
-            _, _, lines, lums = generate_ascii_field(
-                file_path=DEFAULT_SOURCE,
-                cols=cols,
-                char_aspect=DEFAULT_ASPECT,
-                mode="ascii",
-                gamma=0.85,
-            )
-            return format_svg_tspans(
-                lines=lines,
-                matrix_lums=lums,
-                start_x=47.0,
-                start_y=156.0,
-                line_spacing=4.9,
-                accent_color=accent_color,
-                accent_threshold=200,
-            )
-        except Exception as err:
-            print(f"[WARN] Could not generate ASCII from {DEFAULT_SOURCE}: {err}", file=sys.stderr)
-
-    # Fallback to assets/xray-ascii.txt if available
-    txt_path = "assets/xray-ascii.txt"
-    if os.path.exists(txt_path):
-        with open(txt_path, "r", encoding="utf-8") as f:
-            lines = [l.rstrip("\r\n") for l in f if l.strip()]
-        tspans = []
-        for i, line in enumerate(lines):
-            y_pos = 156.0 + i * 4.9
-            tspans.append(f'<tspan x="47.0" y="{y_pos:.1f}">{html.escape(line)}</tspan>')
-        return "\n        ".join(tspans)
-
-    # Minimal emergency fallback
-    return '<tspan x="47.0" y="300.0">[RECON MATRIX INITIALIZING...]</tspan>'
+START_X = 62.8
+START_Y = 128.5
+LINE_SPACING = 7.0
 
 
 def build_svg_template(mode: str = "dark", ascii_markup: Optional[str] = None) -> str:
     """
     Build the precision technical console SVG for dark or light mode.
-    Strictly constrained to #FEFACD, #1A2517, and #700004 (with opacity variations).
+    Strictly constrained to the professional four-color palette.
     
     Layer Hierarchy (Strictly Enforced):
       1. Canvas Background
       2. Technical Grid & Radar Reticles
       3. Physical Scanner Glow & Scanning Beam (Behind ASCII)
-      4. ASCII / Binary Character Field (Dominant, On Top of Scanner)
+      4. Large Multi-Color ASCII Character Field (Dominant, On Top of Scanner)
       5. Frame & Interface Details (Borders, Status, Labels)
     """
     is_dark = (mode == "dark")
@@ -124,19 +94,18 @@ def build_svg_template(mode: str = "dark", ascii_markup: Optional[str] = None) -
     if is_dark:
         bg_canvas = "#1A2517"
         bg_panel = "#1A2517"
-        grid_stroke = "#FEFACD"
+        grid_stroke = "#FFEB93"
         grid_opacity = "0.035"
-        text_primary = "#FEFACD"
-        text_muted = "#FEFACD"
+        text_primary = "#FFEB93"
+        text_muted = "#FFEB93"
         text_muted_op = "0.70"
         dots_color = "#700004"
         dots_op = "0.45"
         accent = "#700004"
         panel_border_op = "0.45"
-        ascii_primary = "#FEFACD"
     else:
-        bg_canvas = "#FEFACD"
-        bg_panel = "#FEFACD"
+        bg_canvas = "#FFEB93"
+        bg_panel = "#FFEB93"
         grid_stroke = "#1A2517"
         grid_opacity = "0.04"
         text_primary = "#1A2517"
@@ -146,10 +115,9 @@ def build_svg_template(mode: str = "dark", ascii_markup: Optional[str] = None) -
         dots_op = "0.40"
         accent = "#700004"
         panel_border_op = "0.55"
-        ascii_primary = "#1A2517"
 
     if ascii_markup is None:
-        ascii_markup = get_cached_ascii_markup(mode)
+        ascii_markup = '<tspan x="62.8" y="300.0">[RECON MATRIX ACTIVE]</tspan>'
 
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 600" width="100%" height="100%">
@@ -205,7 +173,7 @@ def build_svg_template(mode: str = "dark", ascii_markup: Optional[str] = None) -
     .mono {{ font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, "Roboto Mono", monospace; }}
     .ascii {{
       font-family: "JetBrains Mono", Consolas, "SFMono-Regular", Menlo, Monaco, "Courier New", monospace;
-      font-size: 4.5px;
+      font-size: 6.2px;
       font-weight: 700;
       white-space: pre;
     }}
@@ -284,9 +252,9 @@ def build_svg_template(mode: str = "dark", ascii_markup: Optional[str] = None) -
       </g>
     </g>
 
-    <!-- 4. ASCII / BINARY CHARACTER FIELD (RENDERED ON TOP OF SCANNER) -->
+    <!-- 4. ENLARGED COLOR-AWARE ASCII FIELD (RENDERED ON TOP OF SCANNER) -->
     <g id="ascii_layer">
-      <text x="47" y="156" class="ascii" xml:space="preserve" fill="{ascii_primary}">
+      <text x="{START_X:.1f}" y="{START_Y:.1f}" class="ascii" xml:space="preserve">
         {ascii_markup}
       </text>
     </g>
@@ -670,39 +638,35 @@ def main() -> None:
 
     print(f"[INFO] Synchronizing GitHub profile statistics for user '{USER_NAME}'...")
 
-    # Generate ASCII character matrix
-    print(f"[INFO] Generating dense character matrix (cols={args.cols}, mode='{args.mode}')...")
-    cols, rows, lines, lums = generate_ascii_field(
+    # Generate Color-Aware ASCII character matrix (Source Black -> #FFEB93, Red -> #868B32, White -> #FFFFFF)
+    print(f"[INFO] Generating enlarged color-aware character matrix (cols={args.cols}, mode='{args.mode}')...")
+    cols, rows, matrix = generate_color_aware_ascii(
         file_path=DEFAULT_SOURCE,
         cols=args.cols,
         char_aspect=DEFAULT_ASPECT,
         mode=args.mode,
-        gamma=0.85,
     )
 
-    # Save reproducible representation to assets/xray-ascii.txt
+    # Save reproducible plain text representation to assets/xray-ascii.txt
+    text_content = export_ascii_text(matrix)
     with open("assets/xray-ascii.txt", "w", encoding="utf-8") as f:
-        f.write("\n".join(lines) + "\n")
+        f.write(text_content + "\n")
     print(f"[OK] Saved {cols}x{rows} ASCII matrix to assets/xray-ascii.txt")
 
     # Format markup for dark and light modes
-    dark_ascii_markup = format_svg_tspans(
-        lines=lines,
-        matrix_lums=lums,
-        start_x=47.0,
-        start_y=156.0,
-        line_spacing=4.9,
-        accent_color="#700004",
-        accent_threshold=200,
+    dark_ascii_markup = format_color_svg_tspans(
+        matrix=matrix,
+        start_x=START_X,
+        start_y=START_Y,
+        line_spacing=LINE_SPACING,
+        is_light=False,
     )
-    light_ascii_markup = format_svg_tspans(
-        lines=lines,
-        matrix_lums=lums,
-        start_x=47.0,
-        start_y=156.0,
-        line_spacing=4.9,
-        accent_color="#700004",
-        accent_threshold=200,
+    light_ascii_markup = format_color_svg_tspans(
+        matrix=matrix,
+        start_x=START_X,
+        start_y=START_Y,
+        line_spacing=LINE_SPACING,
+        is_light=True,
     )
 
     try:

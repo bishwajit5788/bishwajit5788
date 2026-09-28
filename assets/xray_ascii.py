@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 """
-xray_ascii.py - High-Density Terminal Character Matrix Generator
-Converts radiographic source images into dense ASCII/Binary luminance fields.
+xray_ascii.py - Color-Aware Terminal Character Matrix Generator
+Converts source images into dense, multi-layered color ASCII/Binary fields.
 
 Author: Bishwajit Das (bishwajit5788)
 Strictly adheres to the specification:
-  - Source image luminance sampling (no vector tracing, no contours)
-  - Configurable monospace font aspect-ratio compensation
-  - Configurable character ramps: ascii, binary, hybrid
-  - Reproducible CLI and importable Python API
-  - Dual implementation: Pillow (if available) + Pure Python stdlib PNG reader
+  - Source PNG color quantization and mapping:
+      SOURCE BLACK -> #FFEB93 (Lemon Meringue)
+      SOURCE RED   -> #868B32 (Olive Grove)
+      SOURCE WHITE -> #FFFFFF (White)
+  - Color-aware classification with tolerance for anti-aliasing
+  - Monospace font aspect-ratio compensation
+  - Preserves visual separation between artwork and background
+  - Large sizing filling 80-90% usable width and 70-85% usable height of left panel
+  - Compact SVG text generation using grouped <tspan> runs
 """
 
 from __future__ import annotations
@@ -20,24 +24,38 @@ import os
 import struct
 import sys
 import zlib
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
-# Pre-defined character density ramps
-RAMPS = {
-    # Rich ASCII: space -> subtle dots -> mid tones -> high density symbols
-    "ascii": " .:-=+*#%@",
-    # Pure binary: dark (space/0) -> bright (1)
-    "binary": " 01",
-    # Hybrid: binary interspersed with punctuation density
-    "hybrid": " .:01+*#%@",
+# Exact mapped color definitions
+COLOR_MAP = {
+    "black": "#FFEB93",  # Lemon Meringue
+    "red": "#868B32",    # Olive Grove
+    "white": "#FFFFFF",  # Pure White Highlight
+}
+
+# Light mode color mappings ensuring contrast
+COLOR_MAP_LIGHT = {
+    "black": "#1A2517",  # Dark Olive (high contrast against light background)
+    "red": "#868B32",    # Olive Grove
+    "white": "#700004",  # Dark Garnet accent highlight for light mode
 }
 
 
-def decode_png_stdlib(file_path: str) -> Tuple[int, int, List[List[int]]]:
+def decode_png_rgb(file_path: str) -> Tuple[int, int, List[List[Tuple[int, int, int]]]]:
     """
-    Pure Python standard library PNG decoder (zero external dependencies).
-    Extracts 8-bit luminance values across all pixels.
+    Pure Python standard library PNG RGB decoder (zero external dependencies).
+    Extracts 24-bit RGB values across all pixels.
     """
+    try:
+        from PIL import Image
+        img = Image.open(file_path).convert("RGB")
+        w, h = img.size
+        pixels_flat = list(img.getdata())
+        grid = [pixels_flat[y * w : (y + 1) * w] for y in range(h)]
+        return w, h, grid
+    except Exception:
+        pass
+
     with open(file_path, "rb") as f:
         sig = f.read(8)
         if sig != b"\x89PNG\r\n\x1a\n":
@@ -57,9 +75,9 @@ def decode_png_stdlib(file_path: str) -> Tuple[int, int, List[List[int]]]:
             f.read(4)  # CRC
 
             if chunk_type == b"IHDR":
-                width, height, bit_depth, color_type, comp, filt, interlace = struct.unpack(">IIBBBBB", chunk_data)
+                width, height, bit_depth, color_type, _, _, _ = struct.unpack(">IIBBBBB", chunk_data)
                 if bit_depth != 8 or color_type not in (0, 2, 6):
-                    raise ValueError(f"Unsupported PNG bit_depth={bit_depth} or color_type={color_type}")
+                    raise ValueError(f"Unsupported PNG bit_depth={bit_depth}, color_type={color_type}")
             elif chunk_type == b"IDAT":
                 idat_chunks.extend(chunk_data)
             elif chunk_type == b"IEND":
@@ -73,7 +91,7 @@ def decode_png_stdlib(file_path: str) -> Tuple[int, int, List[List[int]]]:
     stride = width * bpp
     prev_row = bytearray(stride)
     offset = 0
-    grid: List[List[int]] = []
+    grid: List[List[Tuple[int, int, int]]] = []
 
     for _ in range(height):
         filter_type = raw[offset]
@@ -104,208 +122,226 @@ def decode_png_stdlib(file_path: str) -> Tuple[int, int, List[List[int]]]:
 
         prev_row = cur_row
 
-        # Extract luminance
-        row_lum: List[int] = []
-        if color_type == 0:  # Grayscale
-            row_lum = list(cur_row)
-        else:  # RGB or RGBA
+        row_pixels: List[Tuple[int, int, int]] = []
+        if color_type == 0:
+            for x in range(width):
+                v = cur_row[x]
+                row_pixels.append((v, v, v))
+        else:
             for x in range(0, stride, bpp):
-                r, g, b = cur_row[x], cur_row[x + 1], cur_row[x + 2]
-                lum = int(0.299 * r + 0.587 * g + 0.114 * b)
-                row_lum.append(lum)
-        grid.append(row_lum)
+                row_pixels.append((cur_row[x], cur_row[x + 1], cur_row[x + 2]))
+        grid.append(row_pixels)
 
     return width, height, grid
 
 
-def load_luminance_grid(file_path: str) -> Tuple[int, int, List[List[int]]]:
-    """Attempt loading via Pillow, falling back transparently to stdlib decoder."""
-    try:
-        from PIL import Image
-        img = Image.open(file_path).convert("L")
-        w, h = img.size
-        pixels = list(img.getdata())
-        grid = [pixels[y * w : (y + 1) * w] for y in range(h)]
-        return w, h, grid
-    except Exception:
-        return decode_png_stdlib(file_path)
-
-
-def generate_ascii_field(
-    file_path: str,
-    cols: int = 130,
-    char_aspect: float = 0.55,
+def generate_color_aware_ascii(
+    file_path: str = "assets/xray-profile-reference.png",
+    cols: int = 84,
+    char_aspect: float = 0.58,
     mode: str = "ascii",
-    custom_ramp: Optional[str] = None,
-    gamma: float = 0.85,
-    crop_active: bool = True,
-) -> Tuple[int, int, List[str], List[List[int]]]:
+) -> Tuple[int, int, List[List[Tuple[str, str]]]]:
     """
-    Sample luminance across the image field and generate a dense character matrix.
-    Compensates for the monospace font aspect ratio (char_width / char_height ~0.55).
-    
+    Generate color-aware ASCII matrix preserving black, red, and white source layers.
     Returns:
-      (cols, rows, lines, sampled_lums)
+      (cols, rows, matrix) where each row is a list of (character, color_tag) tuples.
+      color_tag is one of: 'space', 'black', 'red', 'white'.
     """
-    w, h, grid = load_luminance_grid(file_path)
+    w, h, grid = decode_png_rgb(file_path)
 
-    ramp = custom_ramp if custom_ramp else RAMPS.get(mode.lower(), RAMPS["ascii"])
-    ramp_len = len(ramp)
+    # Detect the horizontal active silhouette bounds for each row y
+    row_env: Dict[int, Tuple[int, int]] = {}
+    for y in range(h):
+        xs = [x for x in range(w) if grid[y][x][0] > 18 or grid[y][x][1] > 18 or grid[y][x][2] > 18]
+        if xs:
+            row_env[y] = (min(xs) - 4, max(xs) + 4)
 
-    if crop_active:
-        # Detect active content boundaries with balanced margins
-        non_zeros = [(x, y) for y in range(h) for x in range(w) if grid[y][x] > 10]
-        if non_zeros:
-            min_x = min(x for x, y in non_zeros)
-            max_x = max(x for x, y in non_zeros)
-            min_y = min(y for x, y in non_zeros)
-            max_y = max(y for x, y in non_zeros)
-            pad_x = max(20, int((max_x - min_x) * 0.05))
-            pad_y = max(10, int((max_y - min_y) * 0.02))
-            x0 = max(0, min_x - pad_x)
-            x1 = min(w, max_x + pad_x)
-            y0 = max(0, min_y - pad_y)
-            y1 = min(h, max_y + pad_y)
-        else:
-            x0, x1, y0, y1 = 0, w, 0, h
+    # Active emblem crop area
+    all_active_x = [x for env in row_env.values() for x in env]
+    all_active_y = list(row_env.keys())
+    if all_active_x and all_active_y:
+        x0 = max(0, min(all_active_x) - 4)
+        x1 = min(w, max(all_active_x) + 4)
+        y0 = max(0, min(all_active_y) - 2)
+        y1 = min(h, max(all_active_y) + 2)
     else:
         x0, x1, y0, y1 = 0, w, 0, h
 
-    crop_w = x1 - x0
-    crop_h = y1 - y0
+    cw = x1 - x0
+    ch = y1 - y0
 
-    # dx is horizontal step in source image
-    dx = crop_w / cols
-    # dy is vertical step, adjusted for non-square monospace aspect ratio
+    # Step sizes with monospace aspect compensation
+    dx = cw / cols
     dy = dx / char_aspect
-    rows = max(10, int(crop_h / dy))
+    rows = max(10, int(ch / dy))
 
-    lines: List[str] = []
-    matrix_lums: List[List[int]] = []
+    # Character sets
+    if mode == "binary":
+        ramp_white = ["1", "1", "@"]
+        ramp_red = ["1", "0", "1", "+"]
+        ramp_black = ["0", "1", "0", "#"]
+    elif mode == "hybrid":
+        ramp_white = ["@", "#", "1"]
+        ramp_red = ["+", "*", "1", "0", "="]
+        ramp_black = ["#", "0", "%", "@"]
+    else:  # rich ascii (preferred)
+        ramp_white = ["@", "#", "%", "*"]
+        ramp_red = ["-", "+", "=", "*", "#", "%"]
+        ramp_black = ["#", "%", "@", "*", "+"]
+
+    matrix: List[List[Tuple[str, str]]] = []
 
     for r in range(rows):
-        line_chars: List[str] = []
-        line_lums: List[int] = []
         sy0 = int(y0 + r * dy)
         sy1 = min(h, int(y0 + (r + 1) * dy))
         if sy1 <= sy0:
             sy1 = min(h, sy0 + 1)
+        mid_y = (sy0 + sy1) // 2
+        env = row_env.get(mid_y, (9999, -9999))
 
+        row_cells: List[Tuple[str, str]] = []
         for c in range(cols):
             sx0 = int(x0 + c * dx)
             sx1 = min(w, int(x0 + (c + 1) * dx))
             if sx1 <= sx0:
                 sx1 = min(w, sx0 + 1)
+            mid_x = (sx0 + sx1) // 2
 
-            lum_sum = 0
-            cnt = 0
+            # Check if cell is outside the active artwork boundary
+            if mid_x < env[0] or mid_x > env[1]:
+                row_cells.append((" ", "space"))
+                continue
+
+            # Gather cell pixels
+            cell_px: List[Tuple[int, int, int]] = []
             for py in range(sy0, sy1):
                 row_ref = grid[py]
                 for px in range(sx0, sx1):
-                    lum_sum += row_ref[px]
-                    cnt += 1
+                    cell_px.append(row_ref[px])
 
-            avg_lum = lum_sum / max(1, cnt)
-            line_lums.append(int(avg_lum))
+            if not cell_px:
+                row_cells.append((" ", "space"))
+                continue
 
-            # Gamma / contrast curve
-            norm = (avg_lum / 255.0) ** gamma
-            idx = int(norm * ramp_len)
-            idx = min(ramp_len - 1, max(0, idx))
-            line_chars.append(ramp[idx])
+            max_val = max(max(px) for px in cell_px)
+            if max_val < 18:
+                row_cells.append((" ", "space"))
+                continue
 
-        lines.append("".join(line_chars))
-        matrix_lums.append(line_lums)
+            # Classify pixel groups inside cell
+            w_cnt = sum(1 for cr, cg, cb in cell_px if cr > 130 and cg > 130 and cb > 130 and abs(cr - cg) < 40)
+            r_cnt = sum(1 for cr, cg, cb in cell_px if cr > 55 and cr > 1.25 * max(cg, cb) + 8)
+            b_cnt = sum(1 for cr, cg, cb in cell_px if max(cr, cg, cb) < 50)
+            total = len(cell_px)
 
-    return cols, rows, lines, matrix_lums
+            avg_lum = sum(0.299 * cr + 0.587 * cg + 0.114 * cb for cr, cg, cb in cell_px) / total
+
+            # 1. White Highlights (eyes, hood trim, glowing code)
+            if w_cnt >= max(2, int(total * 0.05)):
+                idx = min(len(ramp_white) - 1, int((avg_lum / 255.0) * len(ramp_white)))
+                row_cells.append((ramp_white[idx], "white"))
+            # 2. Red Artwork Structure (hood, frame, biohazard rings, red binary stream)
+            elif r_cnt > b_cnt or r_cnt >= int(total * 0.20):
+                norm_lum = min(1.0, max(0.0, (avg_lum - 20) / 160.0))
+                idx = min(len(ramp_red) - 1, int(norm_lum * len(ramp_red)))
+                row_cells.append((ramp_red[idx], "red"))
+            # 3. Black Inner Artwork (mask, eye cutouts, shadows, inner texture)
+            else:
+                idx = (c + r) % len(ramp_black)
+                row_cells.append((ramp_black[idx], "black"))
+
+        matrix.append(row_cells)
+
+    return cols, rows, matrix
 
 
-def format_svg_tspans(
-    lines: List[str],
-    matrix_lums: List[List[int]],
-    start_x: float = 46.0,
-    start_y: float = 142.0,
-    line_spacing: float = 5.2,
-    accent_color: str = "#700004",
-    accent_threshold: int = 190,
+def format_color_svg_tspans(
+    matrix: List[List[Tuple[str, str]]],
+    start_x: float = 62.8,
+    start_y: float = 128.5,
+    line_spacing: float = 7.0,
+    is_light: bool = False,
 ) -> str:
     """
-    Format ASCII matrix into compact SVG <tspan> rows.
-    Selectively styles high-luminance accent clusters with accent_color (#700004).
-    The main character structure remains in the default parent <text> color.
+    Format color-aware character matrix into compact, valid SVG <tspan> rows.
+    Contiguous runs of identical colors are grouped into single <tspan fill="..."> elements.
     """
+    color_palette = COLOR_MAP_LIGHT if is_light else COLOR_MAP
     tspans: List[str] = []
-    for r_idx, (line, lums) in enumerate(zip(lines, matrix_lums)):
+
+    for r_idx, row in enumerate(matrix):
         y_pos = start_y + r_idx * line_spacing
-        escaped_line = html.escape(line)
+        row_segments: List[str] = []
+        cur_color_tag: Optional[str] = None
+        cur_chars: List[str] = []
 
-        # Check if there are accent clusters in this line
-        has_accents = any(v >= accent_threshold for v in lums)
-        if not has_accents:
-            tspans.append(f'<tspan x="{start_x:.1f}" y="{y_pos:.1f}">{escaped_line}</tspan>')
-        else:
-            # Segment into primary text and accent spans for selective clustering
-            segments: List[str] = []
-            cur_segment: List[str] = []
-            is_accent = False
+        for ch, tag in row:
+            if tag == "space":
+                if cur_chars and cur_color_tag:
+                    fill = color_palette[cur_color_tag]
+                    text = html.escape("".join(cur_chars))
+                    row_segments.append(f'<tspan fill="{fill}">{text}</tspan>')
+                    cur_chars = []
+                    cur_color_tag = None
+                row_segments.append(ch)
+            else:
+                if tag != cur_color_tag:
+                    if cur_chars and cur_color_tag:
+                        fill = color_palette[cur_color_tag]
+                        text = html.escape("".join(cur_chars))
+                        row_segments.append(f'<tspan fill="{fill}">{text}</tspan>')
+                        cur_chars = []
+                    cur_color_tag = tag
+                cur_chars.append(ch)
 
-            for ch, lum in zip(line, lums):
-                char_is_accent = (lum >= accent_threshold and ch not in " .")
-                if char_is_accent != is_accent:
-                    if cur_segment:
-                        seg_text = html.escape("".join(cur_segment))
-                        if is_accent:
-                            segments.append(f'<tspan fill="{accent_color}">{seg_text}</tspan>')
-                        else:
-                            segments.append(seg_text)
-                        cur_segment = []
-                    is_accent = char_is_accent
-                cur_segment.append(ch)
+        if cur_chars and cur_color_tag:
+            fill = color_palette[cur_color_tag]
+            text = html.escape("".join(cur_chars))
+            row_segments.append(f'<tspan fill="{fill}">{text}</tspan>')
 
-            if cur_segment:
-                seg_text = html.escape("".join(cur_segment))
-                if is_accent:
-                    segments.append(f'<tspan fill="{accent_color}">{seg_text}</tspan>')
-                else:
-                    segments.append(seg_text)
-
-            tspans.append(f'<tspan x="{start_x:.1f}" y="{y_pos:.1f}">{"".join(segments)}</tspan>')
+        line_markup = "".join(row_segments)
+        tspans.append(f'<tspan x="{start_x:.1f}" y="{y_pos:.1f}">{line_markup}</tspan>')
 
     return "\n        ".join(tspans)
 
 
+def export_ascii_text(matrix: List[List[Tuple[str, str]]]) -> str:
+    """Export character matrix to plain text for assets/xray-ascii.txt."""
+    lines = []
+    for row in matrix:
+        lines.append("".join(ch for ch, _ in row))
+    return "\n".join(lines)
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate ASCII/Binary matrix from image")
+    parser = argparse.ArgumentParser(description="Generate Color-Aware ASCII/Binary matrix")
     parser.add_argument("--source", default="assets/xray-profile-reference.png", help="Source image path")
-    parser.add_argument("--cols", type=int, default=130, help="Number of character columns (120-180)")
-    parser.add_argument("--aspect", type=float, default=0.55, help="Monospace char aspect ratio")
+    parser.add_argument("--cols", type=int, default=84, help="Number of character columns")
+    parser.add_argument("--aspect", type=float, default=0.58, help="Monospace char aspect ratio")
     parser.add_argument("--mode", choices=["ascii", "binary", "hybrid"], default="ascii", help="Character ramp mode")
-    parser.add_argument("--ramp", default=None, help="Custom character ramp string")
-    parser.add_argument("--gamma", type=float, default=0.85, help="Luminance contrast curve exponent")
     parser.add_argument("--output", default="assets/xray-ascii.txt", help="Output text file path")
     args = parser.parse_args()
 
     if not os.path.exists(args.source):
-        print(f"[ERROR] Source file not found: {args.source}", file=sys.stderr)
+        print(f"[ERROR] Source image not found: {args.source}", file=sys.stderr)
         sys.exit(1)
 
-    cols, rows, lines, _ = generate_ascii_field(
+    cols, rows, matrix = generate_color_aware_ascii(
         file_path=args.source,
         cols=args.cols,
         char_aspect=args.aspect,
         mode=args.mode,
-        custom_ramp=args.ramp,
-        gamma=args.gamma,
     )
 
-    print(f"[OK] Generated {cols} cols x {rows} rows character matrix in '{args.mode}' mode.")
+    print(f"[OK] Generated color-aware matrix: {cols} cols x {rows} rows (mode: {args.mode}).")
 
+    text_content = export_ascii_text(matrix)
     out_dir = os.path.dirname(args.output)
     if out_dir and not os.path.exists(out_dir):
         os.makedirs(out_dir, exist_ok=True)
 
     with open(args.output, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines) + "\n")
+        f.write(text_content + "\n")
 
     print(f"[OK] Saved to {args.output}")
 
