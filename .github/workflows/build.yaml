@@ -10,6 +10,8 @@ on:
       - main
     paths:
       - "today.py"
+      - "xray_ascii.py"
+      - "assets/**"
       - ".github/workflows/**"
       - "cache/requirements.txt"
 

@@ -22,8 +22,30 @@ import re
 import sys
 import tempfile
 import xml.etree.ElementTree as ET
-from typing import Any, Dict, List, Optional
-import requests
+import json
+import ssl
+try:
+    import requests
+    HAS_REQUESTS = True
+except ImportError:
+    import urllib.request
+    import urllib.parse
+    import urllib.error
+    HAS_REQUESTS = False
+
+
+def safe_urlopen(req: Any, timeout: int = 15) -> Any:
+    """Execute urlopen with fallback to unverified SSL context if OS cert store is missing."""
+    try:
+        return urllib.request.urlopen(req, timeout=timeout)
+    except urllib.error.URLError as err:
+        if "CERTIFICATE_VERIFY_FAILED" in str(err) or "certificate verify failed" in str(err):
+            ctx = ssl._create_unverified_context()
+            return urllib.request.urlopen(req, context=ctx, timeout=timeout)
+        raise
+
+
+from assets.xray_ascii import format_svg_tspans, generate_ascii_field
 
 USER_NAME = os.environ.get("USER_NAME", "bishwajit5788")
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN") or os.environ.get("ACCESS_TOKEN") or ""
@@ -37,47 +59,65 @@ HEADERS: Dict[str, str] = {
 if GITHUB_TOKEN:
     HEADERS["Authorization"] = f"Bearer {GITHUB_TOKEN}"
 
-# 32-line ASCII radiograph matrix generated from assets/xray-profile-reference.png and assets/emblem-reference.png
-ASCII_XRAY_LINES = [
-    "                      ..                      ",
-    "                     :--:                     ",
-    "                    -=--+-.                   ",
-    "                  :-:=-=+:=:                  ",
-    "                .----:==:=-=-.                ",
-    "               :-:=-:**++:-+:-:               ",
-    "             .=--+:=#==+-*=:+--=.             ",
-    "            --=+=.-@==#=:-#- =+=-:            ",
-    "        .--=:-=: .*++#===:+#  :=-:=--         ",
-    "        :--==- ..:*+#::::+=*-   -++-=:        ",
-    "        .-=+..=: ==*-:-:.:=++ .- .+==.        ",
-    "         -+: . ..*++*+--==:+*.. . :+-         ",
-    "         :=-: .:=*==++====.-#=:. .:=-         ",
-    "         :=:=:-.*==+..--.:=:=*.-:::=:         ",
-    "         -+-----*.=*::+=:-*:.*-----+-         ",
-    "         :=: +.-*:-:**+-*+-..+-.+ -=-         ",
-    "         -+-:::.*=:-+*--*=-.-+.:::-+-         ",
-    "         :==: ..+#::=+-:+=-.+= . :==-         ",
-    "         :=:  .*=#= .*==*..-*=*.  :=-         ",
-    "         :=: -##--*. :+=. .=--#*- :=-         ",
-    "         -+-*%=+#:=-. ...::- +++%+-+=         ",
-    "        .-=+-=+**=.-.-..-.:.-+-==-+-=:        ",
-    "        :--+=:+*:+-..=--= .-=.=-:+*-=:        ",
-    "         :-=-+--:.- -=-==- :..==+---:         ",
-    "           .-==+-. .. =+ :. .=+==-.           ",
-    "             -=+*+:  :==:. :++=-:             ",
-    "              .=-=+:......:+---.              ",
-    "                :=-==:--:+-:-:                ",
-    "                  ---*=-+:-:                  ",
-    "                   .-+=-=-.                   ",
-    "                     --=:                     ",
-    "                      ..                      ",
-]
+# Default parameters for character matrix generation
+DEFAULT_COLS = 125
+DEFAULT_ASPECT = 0.55
+DEFAULT_SOURCE = "assets/xray-profile-reference.png"
 
 
-def build_svg_template(mode: str = "dark") -> str:
+def get_cached_ascii_markup(mode: str = "dark", cols: int = DEFAULT_COLS) -> str:
     """
-    Build the precision X-ray technical console SVG for the given mode.
+    Generate or retrieve the dense ASCII matrix from the source image.
+    Compensates for monospace font aspect ratio and generates compact <tspan> rows.
+    """
+    accent_color = "#700004"
+    if os.path.exists(DEFAULT_SOURCE):
+        try:
+            _, _, lines, lums = generate_ascii_field(
+                file_path=DEFAULT_SOURCE,
+                cols=cols,
+                char_aspect=DEFAULT_ASPECT,
+                mode="ascii",
+                gamma=0.85,
+            )
+            return format_svg_tspans(
+                lines=lines,
+                matrix_lums=lums,
+                start_x=47.0,
+                start_y=156.0,
+                line_spacing=4.9,
+                accent_color=accent_color,
+                accent_threshold=200,
+            )
+        except Exception as err:
+            print(f"[WARN] Could not generate ASCII from {DEFAULT_SOURCE}: {err}", file=sys.stderr)
+
+    # Fallback to assets/xray-ascii.txt if available
+    txt_path = "assets/xray-ascii.txt"
+    if os.path.exists(txt_path):
+        with open(txt_path, "r", encoding="utf-8") as f:
+            lines = [l.rstrip("\r\n") for l in f if l.strip()]
+        tspans = []
+        for i, line in enumerate(lines):
+            y_pos = 156.0 + i * 4.9
+            tspans.append(f'<tspan x="47.0" y="{y_pos:.1f}">{html.escape(line)}</tspan>')
+        return "\n        ".join(tspans)
+
+    # Minimal emergency fallback
+    return '<tspan x="47.0" y="300.0">[RECON MATRIX INITIALIZING...]</tspan>'
+
+
+def build_svg_template(mode: str = "dark", ascii_markup: Optional[str] = None) -> str:
+    """
+    Build the precision technical console SVG for dark or light mode.
     Strictly constrained to #FEFACD, #1A2517, and #700004 (with opacity variations).
+    
+    Layer Hierarchy (Strictly Enforced):
+      1. Canvas Background
+      2. Technical Grid & Radar Reticles
+      3. Physical Scanner Glow & Scanning Beam (Behind ASCII)
+      4. ASCII / Binary Character Field (Dominant, On Top of Scanner)
+      5. Frame & Interface Details (Borders, Status, Labels)
     """
     is_dark = (mode == "dark")
 
@@ -92,11 +132,8 @@ def build_svg_template(mode: str = "dark") -> str:
         dots_color = "#700004"
         dots_op = "0.45"
         accent = "#700004"
-        scan_beam_color = "#FEFACD"
-        scan_beam_op = "0.28"
         panel_border_op = "0.45"
-        ascii_color = "#700004"
-        ascii_glow_color = "#700004"
+        ascii_primary = "#FEFACD"
     else:
         bg_canvas = "#FEFACD"
         bg_panel = "#FEFACD"
@@ -108,18 +145,11 @@ def build_svg_template(mode: str = "dark") -> str:
         dots_color = "#700004"
         dots_op = "0.40"
         accent = "#700004"
-        scan_beam_color = "#1A2517"
-        scan_beam_op = "0.20"
         panel_border_op = "0.55"
-        ascii_color = "#700004"
-        ascii_glow_color = "#700004"
+        ascii_primary = "#1A2517"
 
-    # Build ASCII tspan rows
-    ascii_tspans = []
-    for i, line in enumerate(ASCII_XRAY_LINES):
-        y_pos = 120.0 + i * 11.2
-        ascii_tspans.append(f'<tspan x="54" y="{y_pos:.1f}">{html.escape(line)}</tspan>')
-    ascii_markup = "\n      ".join(ascii_tspans)
+    if ascii_markup is None:
+        ascii_markup = get_cached_ascii_markup(mode)
 
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 600" width="100%" height="100%">
@@ -130,39 +160,55 @@ def build_svg_template(mode: str = "dark") -> str:
       <circle cx="18" cy="18" r="0.8" fill="{grid_stroke}" fill-opacity="{float(grid_opacity)*1.5:.4f}"/>
     </pattern>
 
-    <!-- Subtle Scanline Texture -->
+    <!-- Subtle Scanline Micro-Texture -->
     <pattern id="scanlines_{mode}" width="4" height="4" patternUnits="userSpaceOnUse">
       <line x1="0" y1="0" x2="4" y2="0" stroke="{grid_stroke}" stroke-opacity="{float(grid_opacity)*0.6:.4f}" stroke-width="1"/>
     </pattern>
 
-    <!-- Scanning Beam Gradient -->
-    <linearGradient id="scanBeam_{mode}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="{scan_beam_color}" stop-opacity="0"/>
-      <stop offset="42%" stop-color="{scan_beam_color}" stop-opacity="0.02"/>
-      <stop offset="49%" stop-color="{scan_beam_color}" stop-opacity="{scan_beam_op}"/>
-      <stop offset="50%" stop-color="{scan_beam_color}" stop-opacity="{min(1.0, float(scan_beam_op)*1.8):.2f}"/>
-      <stop offset="51%" stop-color="{scan_beam_color}" stop-opacity="{scan_beam_op}"/>
-      <stop offset="58%" stop-color="{scan_beam_color}" stop-opacity="0.02"/>
-      <stop offset="100%" stop-color="{scan_beam_color}" stop-opacity="0"/>
+    <!-- Physical Scanning Beam Gradients (Strictly #700004 with Opacity Variations) -->
+    <!-- 1. Soft Wide Glow (90px height) -->
+    <linearGradient id="scanGlowWide_{mode}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#700004" stop-opacity="0"/>
+      <stop offset="25%" stop-color="#700004" stop-opacity="0.05"/>
+      <stop offset="50%" stop-color="#700004" stop-opacity="0.10"/>
+      <stop offset="75%" stop-color="#700004" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#700004" stop-opacity="0"/>
     </linearGradient>
 
-    <!-- Phosphor Glow Filter for ASCII X-Ray Art -->
-    <filter id="asciiGlow_{mode}" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="1.6" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
+    <!-- 2. Medium Glow (38px height) -->
+    <linearGradient id="scanGlowMed_{mode}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#700004" stop-opacity="0"/>
+      <stop offset="20%" stop-color="#700004" stop-opacity="0.12"/>
+      <stop offset="50%" stop-color="#700004" stop-opacity="0.28"/>
+      <stop offset="80%" stop-color="#700004" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#700004" stop-opacity="0"/>
+    </linearGradient>
 
-    <clipPath id="leftPanelClip_{mode}">
-      <rect x="32" y="32" width="364" height="536" rx="6"/>
+    <!-- 3. Core Aura Falloff (12px height) -->
+    <linearGradient id="scanGlowCore_{mode}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#700004" stop-opacity="0"/>
+      <stop offset="35%" stop-color="#700004" stop-opacity="0.30"/>
+      <stop offset="47%" stop-color="#700004" stop-opacity="0.60"/>
+      <stop offset="50%" stop-color="#700004" stop-opacity="0.90"/>
+      <stop offset="53%" stop-color="#700004" stop-opacity="0.60"/>
+      <stop offset="65%" stop-color="#700004" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#700004" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Scope Clip Path to ensure beam remains strictly within internal monitor -->
+    <clipPath id="scopeClip_{mode}">
+      <rect x="42" y="86" width="344" height="428" rx="4"/>
     </clipPath>
   </defs>
 
   <style>
     .mono {{ font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, "Roboto Mono", monospace; }}
-    .ascii {{ font-family: "JetBrains Mono", Consolas, "SFMono-Regular", Menlo, monospace; font-size: 10.5px; font-weight: 700; white-space: pre; }}
+    .ascii {{
+      font-family: "JetBrains Mono", Consolas, "SFMono-Regular", Menlo, Monaco, "Courier New", monospace;
+      font-size: 4.5px;
+      font-weight: 700;
+      white-space: pre;
+    }}
     .title {{ font-size: 20px; font-weight: 700; fill: {text_primary}; }}
     .headline {{ font-size: 13.5px; font-weight: 600; fill: {text_primary}; letter-spacing: 0.5px; }}
     .desc {{ font-size: 12px; fill: {text_muted}; fill-opacity: {text_muted_op}; }}
@@ -195,79 +241,100 @@ def build_svg_template(mode: str = "dark") -> str:
   <text x="1018" y="28" text-anchor="end" class="mono meta-tag">NODE_01 // SECURE CH: 0x7F</text>
 
   <!-- ============================================================ -->
-  <!-- LEFT PANEL: X-RAY / RECON VISUAL (364px wide: x=32 to 396) -->
+  <!-- LEFT PANEL: X-RAY / RECON VISUAL (364px wide: x=32 to 396)   -->
   <!-- ============================================================ -->
   <g id="left_panel">
-    <!-- Panel Housing -->
+    <!-- 1. Left Panel Housing -->
     <rect x="32" y="32" width="364" height="536" rx="6" fill="{bg_panel}" stroke="{accent}" stroke-width="1.2" stroke-opacity="{panel_border_op}"/>
 
-    <!-- Left Panel Header -->
-    <rect x="42" y="42" width="168" height="22" rx="3" fill="{accent}" fill-opacity="0.18" stroke="{accent}" stroke-width="1"/>
-    <text x="48" y="57" class="mono" font-size="10px" font-weight="700" fill="{accent}" letter-spacing="1px">THREAT SURFACE // X-RAY</text>
+    <!-- 2. Technical Grid & Radar Reticles (Behind Scanner & ASCII) -->
+    <g id="technical_grid">
+      <rect x="42" y="86" width="344" height="428" fill="url(#techGrid_{mode})"/>
+      <rect x="42" y="86" width="344" height="428" fill="url(#scanlines_{mode})"/>
+      <circle cx="214" cy="300" r="150" fill="none" stroke="{accent}" stroke-width="0.7" stroke-opacity="0.22" stroke-dasharray="2 6"/>
+      <circle cx="214" cy="300" r="106" fill="none" stroke="{text_primary}" stroke-width="0.7" stroke-opacity="0.10"/>
+      <circle cx="214" cy="300" r="66" fill="none" stroke="{accent}" stroke-width="0.7" stroke-opacity="0.25" stroke-dasharray="3 4"/>
+      <line x1="48" y1="300" x2="380" y2="300" stroke="{accent}" stroke-width="0.7" stroke-opacity="0.25" stroke-dasharray="4 4"/>
+      <line x1="214" y1="92" x2="214" y2="508" stroke="{accent}" stroke-width="0.7" stroke-opacity="0.25" stroke-dasharray="4 4"/>
+    </g>
 
-    <rect x="316" y="42" width="70" height="22" rx="3" fill="{accent}" fill-opacity="0.18" stroke="{accent}" stroke-width="1"/>
-    <text x="351" y="57" text-anchor="middle" class="mono" font-size="10px" font-weight="700" fill="{text_primary}">NODE_01</text>
+    <!-- 3. SCANNER GLOW & SCANNING BEAM (BEHIND ASCII CHARACTER FIELD) -->
+    <g id="scanner_layer" clip-path="url(#scopeClip_{mode})">
+      <g id="scanner_beam" transform="translate(0, 300)">
+        <!-- Layer 1: Very soft wide glow -->
+        <rect x="42" y="-45" width="344" height="90" fill="url(#scanGlowWide_{mode})"/>
+        <!-- Layer 2: Medium glow -->
+        <rect x="42" y="-19" width="344" height="38" fill="url(#scanGlowMed_{mode})"/>
+        <!-- Layer 3: Controlled core falloff -->
+        <rect x="42" y="-6" width="344" height="12" fill="url(#scanGlowCore_{mode})"/>
+        <!-- Layer 4: Thin bright scanning core -->
+        <rect x="42" y="-1" width="344" height="2" fill="#700004" fill-opacity="0.88"/>
+        <!-- Beam Edge Locator Ticks -->
+        <line x1="42" y1="0" x2="52" y2="0" stroke="#700004" stroke-width="1.8" stroke-opacity="0.95"/>
+        <line x1="376" y1="0" x2="386" y2="0" stroke="#700004" stroke-width="1.8" stroke-opacity="0.95"/>
 
-    <!-- Sub-header Telemetry -->
-    <text x="44" y="78" class="mono meta-tag">LAT 28.6139° N / LON 77.2090° E</text>
-    <text x="384" y="78" text-anchor="end" class="mono meta-tag">FREQ: 2.4/5.8 GHz</text>
+        <!-- Smooth vertical scan motion: 10s indefinite linear loop (top -> bottom -> top) -->
+        <animateTransform
+          attributeName="transform"
+          type="translate"
+          values="0 102; 0 498; 0 102"
+          keyTimes="0; 0.5; 1"
+          dur="10s"
+          repeatCount="indefinite"/>
+      </g>
+    </g>
 
-    <!-- Left Panel Internal Scope Frame -->
-    <rect x="42" y="86" width="344" height="428" rx="4" fill="none" stroke="{accent}" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 4"/>
-
-    <!-- Reticle Corner Ticks -->
-    <path d="M 48 98 L 48 92 L 54 92" fill="none" stroke="{accent}" stroke-width="1.5"/>
-    <path d="M 380 98 L 380 92 L 374 92" fill="none" stroke="{accent}" stroke-width="1.5"/>
-    <path d="M 48 502 L 48 508 L 54 508" fill="none" stroke="{accent}" stroke-width="1.5"/>
-    <path d="M 380 502 L 380 508 L 374 508" fill="none" stroke="{accent}" stroke-width="1.5"/>
-
-    <!-- ============================================== -->
-    <!-- X-RAY / HARDWARE RECON EMBLEM (ASCII Matrix)   -->
-    <!-- ============================================== -->
-    <!-- Targeting Crosshairs and Radar Rings Behind ASCII -->
-    <circle cx="214" cy="295" r="152" fill="none" stroke="{accent}" stroke-width="0.7" stroke-opacity="0.25" stroke-dasharray="2 6"/>
-    <circle cx="214" cy="295" r="108" fill="none" stroke="{text_primary}" stroke-width="0.7" stroke-opacity="0.12"/>
-    <circle cx="214" cy="295" r="68" fill="none" stroke="{accent}" stroke-width="0.7" stroke-opacity="0.3" stroke-dasharray="3 4"/>
-
-    <line x1="56" y1="295" x2="372" y2="295" stroke="{accent}" stroke-width="0.7" stroke-opacity="0.35" stroke-dasharray="4 4"/>
-    <line x1="214" y1="102" x2="214" y2="488" stroke="{accent}" stroke-width="0.7" stroke-opacity="0.35" stroke-dasharray="4 4"/>
-
-    <!-- ASCII X-Ray Cyber Reconstruction Rendered from Reference Image -->
-    <g id="xray_ascii_emblem" filter="url(#asciiGlow_{mode})">
-      <text x="54" y="120" class="ascii" xml:space="preserve" fill="{ascii_color}">
-      {ascii_markup}
+    <!-- 4. ASCII / BINARY CHARACTER FIELD (RENDERED ON TOP OF SCANNER) -->
+    <g id="ascii_layer">
+      <text x="47" y="156" class="ascii" xml:space="preserve" fill="{ascii_primary}">
+        {ascii_markup}
       </text>
     </g>
 
-    <!-- Scanning Beam Animation (Subtle, Slow, Professional) -->
-    <g clip-path="url(#leftPanelClip_{mode})">
-      <rect x="32" y="86" width="364" height="60" fill="url(#scanBeam_{mode})">
-        <animate attributeName="y" values="70;460;70" dur="6.5s" repeatCount="indefinite"/>
-      </rect>
-    </g>
+    <!-- 5. FRAME / SCOPE OVERLAYS / UI DETAILS (FRAMING THE FIELD) -->
+    <g id="interface_layer">
+      <!-- Internal Scope Dashed Border -->
+      <rect x="42" y="86" width="344" height="428" rx="4" fill="none" stroke="{accent}" stroke-width="1.2" stroke-opacity="0.38" stroke-dasharray="4 4"/>
+      <!-- Reticle Corner Precision Brackets -->
+      <path d="M 48 98 L 48 92 L 54 92" fill="none" stroke="{accent}" stroke-width="1.6"/>
+      <path d="M 380 98 L 380 92 L 374 92" fill="none" stroke="{accent}" stroke-width="1.6"/>
+      <path d="M 48 502 L 48 508 L 54 508" fill="none" stroke="{accent}" stroke-width="1.6"/>
+      <path d="M 380 502 L 380 508 L 374 508" fill="none" stroke="{accent}" stroke-width="1.6"/>
 
-    <!-- Left Panel Footer / Telemetry Status -->
-    <line x1="42" y1="520" x2="386" y2="520" stroke="{accent}" stroke-width="1" stroke-opacity="0.4"/>
-    <text x="44" y="536" class="mono meta-tag">THREAT SIGNATURE // VISUAL MAP</text>
+      <!-- Header Badges -->
+      <rect x="42" y="42" width="168" height="22" rx="3" fill="{accent}" fill-opacity="0.18" stroke="{accent}" stroke-width="1"/>
+      <text x="48" y="57" class="mono" font-size="10px" font-weight="700" fill="{accent}" letter-spacing="1px">THREAT SURFACE // RECON</text>
 
-    <!-- Pulsing Scan Active Beacon -->
-    <circle cx="50" cy="552" r="4.5" fill="{accent}">
-      <animate attributeName="opacity" values="1;0.35;1" dur="2s" repeatCount="indefinite"/>
-    </circle>
-    <text x="62" y="556" class="mono status-text">SCAN ACTIVE</text>
+      <rect x="316" y="42" width="70" height="22" rx="3" fill="{accent}" fill-opacity="0.18" stroke="{accent}" stroke-width="1"/>
+      <text x="351" y="57" text-anchor="middle" class="mono" font-size="10px" font-weight="700" fill="{text_primary}">NODE_01</text>
 
-    <!-- RF Waveform / Telemetry Signal Bars -->
-    <g transform="translate(322, 544)" fill="{accent}" opacity="0.8">
-      <rect x="0" y="8" width="3" height="4" rx="1"/>
-      <rect x="5" y="5" width="3" height="7" rx="1"/>
-      <rect x="10" y="2" width="3" height="10" rx="1"/>
-      <rect x="15" y="0" width="3" height="12" rx="1"/>
-      <rect x="20" y="4" width="3" height="8" rx="1"/>
-      <rect x="25" y="7" width="3" height="5" rx="1"/>
-      <rect x="30" y="3" width="3" height="9" rx="1"/>
-      <rect x="35" y="1" width="3" height="11" rx="1"/>
-      <rect x="40" y="6" width="3" height="6" rx="1"/>
-      <rect x="45" y="9" width="3" height="3" rx="1"/>
+      <!-- Sub-header Telemetry -->
+      <text x="44" y="78" class="mono meta-tag">LAT 28.6139° N / LON 77.2090° E</text>
+      <text x="384" y="78" text-anchor="end" class="mono meta-tag">FREQ: 2.4/5.8 GHz</text>
+
+      <!-- Footer / Telemetry Status -->
+      <line x1="42" y1="520" x2="386" y2="520" stroke="{accent}" stroke-width="1" stroke-opacity="0.4"/>
+      <text x="44" y="536" class="mono meta-tag">THREAT SIGNATURE // VISUAL MAP</text>
+
+      <!-- Pulsing Scan Active Beacon -->
+      <circle cx="50" cy="552" r="4.5" fill="{accent}">
+        <animate attributeName="opacity" values="1;0.35;1" dur="2s" repeatCount="indefinite"/>
+      </circle>
+      <text x="62" y="556" class="mono status-text">SCAN STATUS // ACTIVE</text>
+
+      <!-- RF Waveform / Telemetry Signal Bars -->
+      <g transform="translate(322, 544)" fill="{accent}" opacity="0.8">
+        <rect x="0" y="8" width="3" height="4" rx="1"/>
+        <rect x="5" y="5" width="3" height="7" rx="1"/>
+        <rect x="10" y="2" width="3" height="10" rx="1"/>
+        <rect x="15" y="0" width="3" height="12" rx="1"/>
+        <rect x="20" y="4" width="3" height="8" rx="1"/>
+        <rect x="25" y="7" width="3" height="5" rx="1"/>
+        <rect x="30" y="3" width="3" height="9" rx="1"/>
+        <rect x="35" y="1" width="3" height="11" rx="1"/>
+        <rect x="40" y="6" width="3" height="6" rx="1"/>
+        <rect x="45" y="9" width="3" height="3" rx="1"/>
+      </g>
     </g>
   </g>
 
@@ -418,14 +485,30 @@ def build_svg_template(mode: str = "dark") -> str:
 def github_get(endpoint: str, params: Optional[Dict[str, Any]] = None) -> Any:
     """Safely execute a GET request against the GitHub REST API."""
     url = f"{API_BASE}{endpoint}" if endpoint.startswith("/") else endpoint
-    response = requests.get(url, headers=HEADERS, params=params, timeout=REQUEST_TIMEOUT)
-    if response.status_code == 404:
-        raise ValueError(f"GitHub resource not found: {url}")
-    if response.status_code == 403 and "rate limit exceeded" in response.text.lower():
-        print(f"[WARN] GitHub API rate limit reached on {url}", file=sys.stderr)
-        return None
-    response.raise_for_status()
-    return response.json()
+    if HAS_REQUESTS:
+        response = requests.get(url, headers=HEADERS, params=params, timeout=REQUEST_TIMEOUT)
+        if response.status_code == 404:
+            raise ValueError(f"GitHub resource not found: {url}")
+        if response.status_code == 403 and "rate limit exceeded" in response.text.lower():
+            print(f"[WARN] GitHub API rate limit reached on {url}", file=sys.stderr)
+            return None
+        response.raise_for_status()
+        return response.json()
+    else:
+        full_url = url
+        if params:
+            full_url = f"{url}?{urllib.parse.urlencode(params)}"
+        req = urllib.request.Request(full_url, headers=HEADERS)
+        try:
+            with safe_urlopen(req, timeout=REQUEST_TIMEOUT) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as err:
+            if err.code == 404:
+                raise ValueError(f"GitHub resource not found: {url}")
+            if err.code in (403, 409):
+                print(f"[WARN] GitHub API notice ({err.code}) on {url}", file=sys.stderr)
+                return None
+            raise
 
 
 def fetch_user_profile(user: str) -> Dict[str, Any]:
@@ -482,17 +565,30 @@ def fetch_total_commits(user: str, repos: List[Dict[str, Any]]) -> int:
         try:
             commits_url = f"{API_BASE}/repos/{user}/{repo_name}/commits"
             params = {"author": user, "per_page": 100}
-            resp = requests.get(commits_url, headers=HEADERS, params=params, timeout=REQUEST_TIMEOUT)
-            if resp.status_code == 200:
-                commits_list = resp.json()
-                if isinstance(commits_list, list):
-                    total_commits += len(commits_list)
-            elif resp.status_code == 409:
-                continue
-            elif resp.status_code == 403:
-                print(f"[WARN] Rate limited while fetching commits for {repo_name}", file=sys.stderr)
-                break
-        except requests.RequestException as err:
+            if HAS_REQUESTS:
+                resp = requests.get(commits_url, headers=HEADERS, params=params, timeout=REQUEST_TIMEOUT)
+                if resp.status_code == 200:
+                    commits_list = resp.json()
+                    if isinstance(commits_list, list):
+                        total_commits += len(commits_list)
+                elif resp.status_code == 409:
+                    continue
+                elif resp.status_code == 403:
+                    print(f"[WARN] Rate limited while fetching commits for {repo_name}", file=sys.stderr)
+                    break
+            else:
+                full_url = f"{commits_url}?{urllib.parse.urlencode(params)}"
+                req = urllib.request.Request(full_url, headers=HEADERS)
+                try:
+                    with safe_urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
+                        commits_list = json.loads(resp.read().decode("utf-8"))
+                        if isinstance(commits_list, list):
+                            total_commits += len(commits_list)
+                except urllib.error.HTTPError as err:
+                    if err.code in (403, 409):
+                        continue
+                    raise
+        except Exception as err:
             print(f"[INFO] Skipping commits for {repo_name}: {err}", file=sys.stderr)
             continue
     return total_commits
@@ -543,14 +639,9 @@ def replace_svg_placeholder(svg_content: str, element_id: str, new_value: Any) -
     return new_svg
 
 
-def update_svg_file(file_path: str, stats: Dict[str, Any], mode: str) -> None:
-    """Atomically update placeholders in an SVG file and validate XML."""
-    if not os.path.exists(file_path):
-        print(f"[INFO] Initializing fresh template for {file_path}")
-        svg_content = build_svg_template(mode)
-    else:
-        with open(file_path, "r", encoding="utf-8") as f:
-            svg_content = f.read()
+def update_svg_file(file_path: str, stats: Dict[str, Any], mode: str, ascii_markup: Optional[str] = None) -> None:
+    """Atomically generate or update an SVG file and validate XML."""
+    svg_content = build_svg_template(mode, ascii_markup)
 
     for element_id, value in stats.items():
         svg_content = replace_svg_placeholder(svg_content, element_id, value)
@@ -572,17 +663,47 @@ def update_svg_file(file_path: str, stats: Dict[str, Any], mode: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Refresh GitHub profile SVG telemetry")
+    parser.add_argument("--cols", type=int, default=DEFAULT_COLS, help="Columns in character matrix")
+    parser.add_argument("--mode", choices=["ascii", "binary", "hybrid"], default="ascii", help="Character ramp mode")
     parser.add_argument("--regenerate", action="store_true", help="Force template regeneration before syncing")
     args = parser.parse_args()
 
     print(f"[INFO] Synchronizing GitHub profile statistics for user '{USER_NAME}'...")
 
-    if args.regenerate:
-        print("[INFO] Regenerating pristine dark and light SVG templates...")
-        with open("dark_mode.svg", "w", encoding="utf-8") as f:
-            f.write(build_svg_template("dark"))
-        with open("light_mode.svg", "w", encoding="utf-8") as f:
-            f.write(build_svg_template("light"))
+    # Generate ASCII character matrix
+    print(f"[INFO] Generating dense character matrix (cols={args.cols}, mode='{args.mode}')...")
+    cols, rows, lines, lums = generate_ascii_field(
+        file_path=DEFAULT_SOURCE,
+        cols=args.cols,
+        char_aspect=DEFAULT_ASPECT,
+        mode=args.mode,
+        gamma=0.85,
+    )
+
+    # Save reproducible representation to assets/xray-ascii.txt
+    with open("assets/xray-ascii.txt", "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    print(f"[OK] Saved {cols}x{rows} ASCII matrix to assets/xray-ascii.txt")
+
+    # Format markup for dark and light modes
+    dark_ascii_markup = format_svg_tspans(
+        lines=lines,
+        matrix_lums=lums,
+        start_x=47.0,
+        start_y=156.0,
+        line_spacing=4.9,
+        accent_color="#700004",
+        accent_threshold=200,
+    )
+    light_ascii_markup = format_svg_tspans(
+        lines=lines,
+        matrix_lums=lums,
+        start_x=47.0,
+        start_y=156.0,
+        line_spacing=4.9,
+        accent_color="#700004",
+        accent_threshold=200,
+    )
 
     try:
         profile = fetch_user_profile(USER_NAME)
@@ -624,10 +745,10 @@ def main() -> None:
     for k, v in stats.items():
         print(f"  • {k}: {v}")
 
-    update_svg_file("dark_mode.svg", stats, "dark")
-    update_svg_file("light_mode.svg", stats, "light")
+    update_svg_file("dark_mode.svg", stats, "dark", dark_ascii_markup)
+    update_svg_file("light_mode.svg", stats, "light", light_ascii_markup)
 
-    print("[SUCCESS] All profile SVG interfaces updated successfully.")
+    print("[SUCCESS] All profile SVG interfaces updated and validated successfully.")
 
 
 if __name__ == "__main__":

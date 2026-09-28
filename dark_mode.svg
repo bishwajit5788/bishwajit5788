@@ -7,39 +7,55 @@
       <circle cx="18" cy="18" r="0.8" fill="#FEFACD" fill-opacity="0.0525"/>
     </pattern>
 
-    <!-- Subtle Scanline Texture -->
+    <!-- Subtle Scanline Micro-Texture -->
     <pattern id="scanlines_dark" width="4" height="4" patternUnits="userSpaceOnUse">
       <line x1="0" y1="0" x2="4" y2="0" stroke="#FEFACD" stroke-opacity="0.0210" stroke-width="1"/>
     </pattern>
 
-    <!-- Scanning Beam Gradient -->
-    <linearGradient id="scanBeam_dark" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#FEFACD" stop-opacity="0"/>
-      <stop offset="42%" stop-color="#FEFACD" stop-opacity="0.02"/>
-      <stop offset="49%" stop-color="#FEFACD" stop-opacity="0.28"/>
-      <stop offset="50%" stop-color="#FEFACD" stop-opacity="0.50"/>
-      <stop offset="51%" stop-color="#FEFACD" stop-opacity="0.28"/>
-      <stop offset="58%" stop-color="#FEFACD" stop-opacity="0.02"/>
-      <stop offset="100%" stop-color="#FEFACD" stop-opacity="0"/>
+    <!-- Physical Scanning Beam Gradients (Strictly #700004 with Opacity Variations) -->
+    <!-- 1. Soft Wide Glow (90px height) -->
+    <linearGradient id="scanGlowWide_dark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#700004" stop-opacity="0"/>
+      <stop offset="25%" stop-color="#700004" stop-opacity="0.05"/>
+      <stop offset="50%" stop-color="#700004" stop-opacity="0.10"/>
+      <stop offset="75%" stop-color="#700004" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#700004" stop-opacity="0"/>
     </linearGradient>
 
-    <!-- Phosphor Glow Filter for ASCII X-Ray Art -->
-    <filter id="asciiGlow_dark" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="1.6" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
+    <!-- 2. Medium Glow (38px height) -->
+    <linearGradient id="scanGlowMed_dark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#700004" stop-opacity="0"/>
+      <stop offset="20%" stop-color="#700004" stop-opacity="0.12"/>
+      <stop offset="50%" stop-color="#700004" stop-opacity="0.28"/>
+      <stop offset="80%" stop-color="#700004" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#700004" stop-opacity="0"/>
+    </linearGradient>
 
-    <clipPath id="leftPanelClip_dark">
-      <rect x="32" y="32" width="364" height="536" rx="6"/>
+    <!-- 3. Core Aura Falloff (12px height) -->
+    <linearGradient id="scanGlowCore_dark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#700004" stop-opacity="0"/>
+      <stop offset="35%" stop-color="#700004" stop-opacity="0.30"/>
+      <stop offset="47%" stop-color="#700004" stop-opacity="0.60"/>
+      <stop offset="50%" stop-color="#700004" stop-opacity="0.90"/>
+      <stop offset="53%" stop-color="#700004" stop-opacity="0.60"/>
+      <stop offset="65%" stop-color="#700004" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#700004" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Scope Clip Path to ensure beam remains strictly within internal monitor -->
+    <clipPath id="scopeClip_dark">
+      <rect x="42" y="86" width="344" height="428" rx="4"/>
     </clipPath>
   </defs>
 
   <style>
     .mono { font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, "Roboto Mono", monospace; }
-    .ascii { font-family: "JetBrains Mono", Consolas, "SFMono-Regular", Menlo, monospace; font-size: 10.5px; font-weight: 700; white-space: pre; }
+    .ascii {
+      font-family: "JetBrains Mono", Consolas, "SFMono-Regular", Menlo, Monaco, "Courier New", monospace;
+      font-size: 4.5px;
+      font-weight: 700;
+      white-space: pre;
+    }
     .title { font-size: 20px; font-weight: 700; fill: #FEFACD; }
     .headline { font-size: 13.5px; font-weight: 600; fill: #FEFACD; letter-spacing: 0.5px; }
     .desc { font-size: 12px; fill: #FEFACD; fill-opacity: 0.70; }
@@ -72,110 +88,157 @@
   <text x="1018" y="28" text-anchor="end" class="mono meta-tag">NODE_01 // SECURE CH: 0x7F</text>
 
   <!-- ============================================================ -->
-  <!-- LEFT PANEL: X-RAY / RECON VISUAL (364px wide: x=32 to 396) -->
+  <!-- LEFT PANEL: X-RAY / RECON VISUAL (364px wide: x=32 to 396)   -->
   <!-- ============================================================ -->
   <g id="left_panel">
-    <!-- Panel Housing -->
+    <!-- 1. Left Panel Housing -->
     <rect x="32" y="32" width="364" height="536" rx="6" fill="#1A2517" stroke="#700004" stroke-width="1.2" stroke-opacity="0.45"/>
 
-    <!-- Left Panel Header -->
-    <rect x="42" y="42" width="168" height="22" rx="3" fill="#700004" fill-opacity="0.18" stroke="#700004" stroke-width="1"/>
-    <text x="48" y="57" class="mono" font-size="10px" font-weight="700" fill="#700004" letter-spacing="1px">THREAT SURFACE // X-RAY</text>
+    <!-- 2. Technical Grid & Radar Reticles (Behind Scanner & ASCII) -->
+    <g id="technical_grid">
+      <rect x="42" y="86" width="344" height="428" fill="url(#techGrid_dark)"/>
+      <rect x="42" y="86" width="344" height="428" fill="url(#scanlines_dark)"/>
+      <circle cx="214" cy="300" r="150" fill="none" stroke="#700004" stroke-width="0.7" stroke-opacity="0.22" stroke-dasharray="2 6"/>
+      <circle cx="214" cy="300" r="106" fill="none" stroke="#FEFACD" stroke-width="0.7" stroke-opacity="0.10"/>
+      <circle cx="214" cy="300" r="66" fill="none" stroke="#700004" stroke-width="0.7" stroke-opacity="0.25" stroke-dasharray="3 4"/>
+      <line x1="48" y1="300" x2="380" y2="300" stroke="#700004" stroke-width="0.7" stroke-opacity="0.25" stroke-dasharray="4 4"/>
+      <line x1="214" y1="92" x2="214" y2="508" stroke="#700004" stroke-width="0.7" stroke-opacity="0.25" stroke-dasharray="4 4"/>
+    </g>
 
-    <rect x="316" y="42" width="70" height="22" rx="3" fill="#700004" fill-opacity="0.18" stroke="#700004" stroke-width="1"/>
-    <text x="351" y="57" text-anchor="middle" class="mono" font-size="10px" font-weight="700" fill="#FEFACD">NODE_01</text>
+    <!-- 3. SCANNER GLOW & SCANNING BEAM (BEHIND ASCII CHARACTER FIELD) -->
+    <g id="scanner_layer" clip-path="url(#scopeClip_dark)">
+      <g id="scanner_beam" transform="translate(0, 300)">
+        <!-- Layer 1: Very soft wide glow -->
+        <rect x="42" y="-45" width="344" height="90" fill="url(#scanGlowWide_dark)"/>
+        <!-- Layer 2: Medium glow -->
+        <rect x="42" y="-19" width="344" height="38" fill="url(#scanGlowMed_dark)"/>
+        <!-- Layer 3: Controlled core falloff -->
+        <rect x="42" y="-6" width="344" height="12" fill="url(#scanGlowCore_dark)"/>
+        <!-- Layer 4: Thin bright scanning core -->
+        <rect x="42" y="-1" width="344" height="2" fill="#700004" fill-opacity="0.88"/>
+        <!-- Beam Edge Locator Ticks -->
+        <line x1="42" y1="0" x2="52" y2="0" stroke="#700004" stroke-width="1.8" stroke-opacity="0.95"/>
+        <line x1="376" y1="0" x2="386" y2="0" stroke="#700004" stroke-width="1.8" stroke-opacity="0.95"/>
 
-    <!-- Sub-header Telemetry -->
-    <text x="44" y="78" class="mono meta-tag">LAT 28.6139° N / LON 77.2090° E</text>
-    <text x="384" y="78" text-anchor="end" class="mono meta-tag">FREQ: 2.4/5.8 GHz</text>
+        <!-- Smooth vertical scan motion: 10s indefinite linear loop (top -> bottom -> top) -->
+        <animateTransform
+          attributeName="transform"
+          type="translate"
+          values="0 102; 0 498; 0 102"
+          keyTimes="0; 0.5; 1"
+          dur="10s"
+          repeatCount="indefinite"/>
+      </g>
+    </g>
 
-    <!-- Left Panel Internal Scope Frame -->
-    <rect x="42" y="86" width="344" height="428" rx="4" fill="none" stroke="#700004" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 4"/>
-
-    <!-- Reticle Corner Ticks -->
-    <path d="M 48 98 L 48 92 L 54 92" fill="none" stroke="#700004" stroke-width="1.5"/>
-    <path d="M 380 98 L 380 92 L 374 92" fill="none" stroke="#700004" stroke-width="1.5"/>
-    <path d="M 48 502 L 48 508 L 54 508" fill="none" stroke="#700004" stroke-width="1.5"/>
-    <path d="M 380 502 L 380 508 L 374 508" fill="none" stroke="#700004" stroke-width="1.5"/>
-
-    <!-- ============================================== -->
-    <!-- X-RAY / HARDWARE RECON EMBLEM (ASCII Matrix)   -->
-    <!-- ============================================== -->
-    <!-- Targeting Crosshairs and Radar Rings Behind ASCII -->
-    <circle cx="214" cy="295" r="152" fill="none" stroke="#700004" stroke-width="0.7" stroke-opacity="0.25" stroke-dasharray="2 6"/>
-    <circle cx="214" cy="295" r="108" fill="none" stroke="#FEFACD" stroke-width="0.7" stroke-opacity="0.12"/>
-    <circle cx="214" cy="295" r="68" fill="none" stroke="#700004" stroke-width="0.7" stroke-opacity="0.3" stroke-dasharray="3 4"/>
-
-    <line x1="56" y1="295" x2="372" y2="295" stroke="#700004" stroke-width="0.7" stroke-opacity="0.35" stroke-dasharray="4 4"/>
-    <line x1="214" y1="102" x2="214" y2="488" stroke="#700004" stroke-width="0.7" stroke-opacity="0.35" stroke-dasharray="4 4"/>
-
-    <!-- ASCII X-Ray Cyber Reconstruction Rendered from Reference Image -->
-    <g id="xray_ascii_emblem" filter="url(#asciiGlow_dark)">
-      <text x="54" y="120" class="ascii" xml:space="preserve" fill="#700004">
-      <tspan x="54" y="120.0">                      ..                      </tspan>
-      <tspan x="54" y="131.2">                     :--:                     </tspan>
-      <tspan x="54" y="142.4">                    -=--+-.                   </tspan>
-      <tspan x="54" y="153.6">                  :-:=-=+:=:                  </tspan>
-      <tspan x="54" y="164.8">                .----:==:=-=-.                </tspan>
-      <tspan x="54" y="176.0">               :-:=-:**++:-+:-:               </tspan>
-      <tspan x="54" y="187.2">             .=--+:=#==+-*=:+--=.             </tspan>
-      <tspan x="54" y="198.4">            --=+=.-@==#=:-#- =+=-:            </tspan>
-      <tspan x="54" y="209.6">        .--=:-=: .*++#===:+#  :=-:=--         </tspan>
-      <tspan x="54" y="220.8">        :--==- ..:*+#::::+=*-   -++-=:        </tspan>
-      <tspan x="54" y="232.0">        .-=+..=: ==*-:-:.:=++ .- .+==.        </tspan>
-      <tspan x="54" y="243.2">         -+: . ..*++*+--==:+*.. . :+-         </tspan>
-      <tspan x="54" y="254.4">         :=-: .:=*==++====.-#=:. .:=-         </tspan>
-      <tspan x="54" y="265.6">         :=:=:-.*==+..--.:=:=*.-:::=:         </tspan>
-      <tspan x="54" y="276.8">         -+-----*.=*::+=:-*:.*-----+-         </tspan>
-      <tspan x="54" y="288.0">         :=: +.-*:-:**+-*+-..+-.+ -=-         </tspan>
-      <tspan x="54" y="299.2">         -+-:::.*=:-+*--*=-.-+.:::-+-         </tspan>
-      <tspan x="54" y="310.4">         :==: ..+#::=+-:+=-.+= . :==-         </tspan>
-      <tspan x="54" y="321.6">         :=:  .*=#= .*==*..-*=*.  :=-         </tspan>
-      <tspan x="54" y="332.8">         :=: -##--*. :+=. .=--#*- :=-         </tspan>
-      <tspan x="54" y="344.0">         -+-*%=+#:=-. ...::- +++%+-+=         </tspan>
-      <tspan x="54" y="355.2">        .-=+-=+**=.-.-..-.:.-+-==-+-=:        </tspan>
-      <tspan x="54" y="366.4">        :--+=:+*:+-..=--= .-=.=-:+*-=:        </tspan>
-      <tspan x="54" y="377.6">         :-=-+--:.- -=-==- :..==+---:         </tspan>
-      <tspan x="54" y="388.8">           .-==+-. .. =+ :. .=+==-.           </tspan>
-      <tspan x="54" y="400.0">             -=+*+:  :==:. :++=-:             </tspan>
-      <tspan x="54" y="411.2">              .=-=+:......:+---.              </tspan>
-      <tspan x="54" y="422.4">                :=-==:--:+-:-:                </tspan>
-      <tspan x="54" y="433.6">                  ---*=-+:-:                  </tspan>
-      <tspan x="54" y="444.8">                   .-+=-=-.                   </tspan>
-      <tspan x="54" y="456.0">                     --=:                     </tspan>
-      <tspan x="54" y="467.2">                      ..                      </tspan>
+    <!-- 4. ASCII / BINARY CHARACTER FIELD (RENDERED ON TOP OF SCANNER) -->
+    <g id="ascii_layer">
+      <text x="47" y="156" class="ascii" xml:space="preserve" fill="#FEFACD">
+        <tspan x="47.0" y="156.0">                                                                                                                             </tspan>
+        <tspan x="47.0" y="160.9">                                                    :-=++=-.                                                                 </tspan>
+        <tspan x="47.0" y="165.8">                                                  :++-:---=+=                                                                </tspan>
+        <tspan x="47.0" y="170.7">                                                .-*+:-++++.+*=:                                                              </tspan>
+        <tspan x="47.0" y="175.6">                                             .-++*#+.-*+++.=*#*+=:                                                           </tspan>
+        <tspan x="47.0" y="180.5">                                          .-=*+=:=**+::=-:=+*=:-=++=:                                                        </tspan>
+        <tspan x="47.0" y="185.4">                                        :+++=::::=*#*#+***###=-:::-+++-:                                                     </tspan>
+        <tspan x="47.0" y="190.3">                                     :=+++-:::-=++=+-..--..-++++=--=:-=++-.                                                  </tspan>
+        <tspan x="47.0" y="195.2">                                  -=++==---==++++-...=*<tspan fill="#700004">%</tspan>#+-. :=++++=::=++++=-.                                               </tspan>
+        <tspan x="47.0" y="200.1">                               :=++=-:--++++++-:..-#<tspan fill="#700004">@%</tspan>##*+##+-  :+*+++**-::==++-.                                            </tspan>
+        <tspan x="47.0" y="205.0">                            :=++=-:::-=+++*=:  -*<tspan fill="#700004">%%</tspan>%****+==++*#+- .-+*++=-::--=+*+-                                          </tspan>
+        <tspan x="47.0" y="209.9">                         :=**+-:-:-+++++=-..:+<tspan fill="#700004">%@%</tspan>**+===+=---==+*##+-..-+++*+=-:-:-=*+-                                       </tspan>
+        <tspan x="47.0" y="214.8">                      :=*##**+-:=****=-...=#<tspan fill="#700004">@@%</tspan>*++==--=+=------=+*#<tspan fill="#700004">%</tspan>#=. .=+***+=::=+#**=:.                                   </tspan>
+        <tspan x="47.0" y="219.7">                   :=**+--+*#**++*+-:....#<tspan fill="#700004">@@%</tspan>#**=---::=*+-:::---+++*#<tspan fill="#700004">%</tspan>#. . :=**+*+-+++:=++=-.                                </tspan>
+        <tspan x="47.0" y="224.6">         ::-:.  :=+++=:-+:-+*++=-. :  ..*<tspan fill="#700004">%@</tspan>##*=-=-===+*#*+=------==+*<tspan fill="#700004">%%</tspan>* .  . :=++++=::*:-=++=-.  :---:                      </tspan>
+        <tspan x="47.0" y="229.5">      .+*+===+**++-:::-=+*++=--    :  :+<tspan fill="#700004">@@</tspan>##+=:-+==+*+=+==++=--=::=+*#<tspan fill="#700004">%%</tspan>=.  :    -=+++*=-::.:==++*+===+*=                    </tspan>
+        <tspan x="47.0" y="234.4">      **-:=+-:+##=:-=+*++=-.  :.... .:-<tspan fill="#700004">%@</tspan>#+**+:=+++=:  =-  :=++==-=*#*#<tspan fill="#700004">%%</tspan>:.. ....:  :=++*+=-::+##-:=+=:=*=                   </tspan>
+        <tspan x="47.0" y="239.3">     .*+.*+=*--*+=+***=-.    .:   ....<tspan fill="#700004">%@</tspan>#+=***+*+=:.:.:+=..:.-=**++*#=+#<tspan fill="#700004">@%</tspan>....  .:     :=+**+==#+:++=*+:+*                   </tspan>
+        <tspan x="47.0" y="244.2">      *+-:=+-:+##+*=-:.  .:. ---.:. .#<tspan fill="#700004">%%</tspan>+-=-+*+-:-:.=::==::-.--:=+*+-==+#<tspan fill="#700004">%</tspan>*...:.---..:.  .:=+*#<tspan fill="#700004">%</tspan>*=:-+=:=*=                   </tspan>
+        <tspan x="47.0" y="249.1">      .+*++==#**+-.  :: :##+:---:.  +<tspan fill="#700004">%%</tspan>*+=+**=:::=-:=.:+=::-.=-::-+#*+++*<tspan fill="#700004">%%</tspan>=. .:-:-:*##: :.  :=****==*++-                    </tspan>
+        <tspan x="47.0" y="254.0">        =#*+*##-.    ::..-=:.:::.  -<tspan fill="#700004">%%</tspan>*+=+*+:.:--====:=++--=-==--..-+*+++*<tspan fill="#700004">%%</tspan>.  ::::.:--..::    .+##++#*:                     </tspan>
+        <tspan x="47.0" y="258.9">        =+=:=##-.:-.::       :=-: .<tspan fill="#700004">%@</tspan>#****- :+#*#<tspan fill="#700004">%</tspan>#+=-:+=:-=+#<tspan fill="#700004">%</tspan>***+. =**###<tspan fill="#700004">@</tspan>#  :--- .    .::::.:+##::**.                     </tspan>
+        <tspan x="47.0" y="263.8">        =+=:+#*-..::=-: .-=  :+=: *<tspan fill="#700004">%</tspan>%###+: .*###<tspan fill="#700004">%</tspan>#**++*##*++*+###***  :*###<tspan fill="#700004">%%</tspan>= -++-  =-. :=-::..=#*::**.                     </tspan>
+        <tspan x="47.0" y="268.7">        =+=:+##-:. =+.. . -+ :==:=<tspan fill="#700004">%</tspan>#*#*= :-:--:--=+*++=+++++*+-:::::--::+*#*<tspan fill="#700004">%%</tspan>.:==- +-    .*: .:+##::**.                     </tspan>
+        <tspan x="47.0" y="273.6">        =+=:=##:  .*+:===--*..::-<tspan fill="#700004">%%</tspan>##*:..-%=::-+-.. ...*+. . ..-+:.:+*:..-*##<tspan fill="#700004">%</tspan>*.-::.#--===:*+   +##::+*                      </tspan>
+        <tspan x="47.0" y="278.5">        =+=-=**: :=+*+-.:+#+-: .#<tspan fill="#700004">%</tspan>##=:...*<tspan fill="#700004">%</tspan>#=:.-**=   =#*-  .=*+:.:+#<tspan fill="#700004">%</tspan>-:.::+##<tspan fill="#700004">%</tspan>+. :=+*+:.-**+-. =#*--+*                      </tspan>
+        <tspan x="47.0" y="283.4">        =****#%:-*=-+=*:+++=-+-+<tspan fill="#700004">@%</tspan>*--: :.*<tspan fill="#700004">%</tspan>**+::. .-+#**=++=:. .:-+**<tspan fill="#700004">%</tspan>-:..--=#<tspan fill="#700004">%%</tspan>:-*-=++=:*=*-=*.+##****.                     </tspan>
+        <tspan x="47.0" y="288.3">        =*+=+##-+...*::*=:*:..+<tspan fill="#700004">@%</tspan>*---:....-*#**=***+=*#*=+--+***=*##*-::::----*<tspan fill="#700004">%</tspan>%=..:+.=*.-+..:=+##==**.                     </tspan>
+        <tspan x="47.0" y="293.2">        =+=-=#*-:.  .=+<tspan fill="#700004">%</tspan>+=.   =<tspan fill="#700004">@</tspan>%*-=:..:...-==*###+**+=--==+++#*#+==-.:::.:-=-##<tspan fill="#700004">%</tspan>:   .=*%=-   .:+**:-+*                      </tspan>
+        <tspan x="47.0" y="298.1">        =+=-+**-.::::=*=+=::::.<tspan fill="#700004">%%</tspan>#*-=::::..+<tspan fill="#700004">%</tspan>=:=#%<tspan fill="#700004">%</tspan>#+*#*++++#<tspan fill="#700004">%</tspan>##::+<tspan fill="#700004">%</tspan>-.::-:---##<tspan fill="#700004">%</tspan>+ ::::++=*-::-..+*#--+*                      </tspan>
+        <tspan x="47.0" y="303.0">        =++*+*#=::::::.  :::.  :<tspan fill="#700004">@%</tspan>#+=-:-...-##=.*#*#.-* :+::#*#=.+*<tspan fill="#700004">%</tspan>..:--:=-*#%*.  .:::  .:::-::*##++**                      </tspan>
+        <tspan x="47.0" y="307.9">        =*+++#<tspan fill="#700004">%</tspan>=-+*-::::::::-:..=<tspan fill="#700004">@%</tspan>#*-::--:-%#*:=<tspan fill="#700004">@</tspan>##.-* .+::##<tspan fill="#700004">%</tspan>:-*#*:---::=##<tspan fill="#700004">%</tspan>#..:-:::::::::+#--###++**                      </tspan>
+        <tspan x="47.0" y="312.8">        =++-=##=:==....:::..+=:  *<tspan fill="#700004">@@</tspan>#*=---:.:+#:-<tspan fill="#700004">%</tspan>##:-* :+::###:=#=..--=:=*#<tspan fill="#700004">%@</tspan>- .-== ..:....-+-:*##--+*                      </tspan>
+        <tspan x="47.0" y="317.7">        =+=:=##- :.    :::. ::+=+*#<tspan fill="#700004">@</tspan>%#+---:.:.:--#<tspan fill="#700004">%</tspan>%:=#..+--##+--.:: :=--*##<tspan fill="#700004">%</tspan>*+=+=:. :::.   ... ***::+*                      </tspan>
+        <tspan x="47.0" y="322.6">        =++=+##-.:  . .:..:=#<tspan fill="#700004">@@@</tspan>*--*<tspan fill="#700004">@</tspan>##=::..::. :+<tspan fill="#700004">%</tspan>##*#--++*#%=. .:: .-:*##<tspan fill="#700004">%</tspan>=--#<tspan fill="#700004">@@@</tspan>*-:..:. .  : *##==**                      </tspan>
+        <tspan x="47.0" y="327.5">        =+=-=#*-.:......=#<tspan fill="#700004">%%@%</tspan>###=-:=<tspan fill="#700004">%</tspan>##-:.:::..::.=###++*##-.::..::..:=###-::+##*#<tspan fill="#700004">%%%</tspan>*- .... : **#--**.                     </tspan>
+        <tspan x="47.0" y="332.4">        =+=-=#*-.: .:=#<tspan fill="#700004">@%@%</tspan>##**#%*-..:##*::-::....  :.--=-.:  ....:--:-*#*:..-#%#***#<tspan fill="#700004">%%%%</tspan>*-.  : **#-:**.                     </tspan>
+        <tspan x="47.0" y="337.3">        =*+=+##-.:=*<tspan fill="#700004">@@%%</tspan>#****#**+#+:..:+#*:-::---:....:..:....:---:-::*#=:..:*#+**#*++*#%<tspan fill="#700004">%@%</tspan>*-: ##<tspan fill="#700004">%</tspan>++#*.                     </tspan>
+        <tspan x="47.0" y="342.2">       -*#*+*%#*:-#<tspan fill="#700004">%%</tspan>###**+==+*####+:...=*+:::==-. -+-....=*: :===:::**-..::+####*+=++++*##<tspan fill="#700004">%%</tspan>*:+###++*#+:                    </tspan>
+        <tspan x="47.0" y="347.1">      +*=:-=-=***-::=***++=--+*=+*+#+.   :*+.:-::.=#:......-#::---:.*+.   :+*+*==*=--=++**+-.:*#*+--+-:+*-                   </tspan>
+        <tspan x="47.0" y="352.0">     .*+.*++*-+#<tspan fill="#700004">%</tspan>#-.---=+**+++++ :+*#+=+=.:==::...##..:--:.:#*...::=-..++-+#*+: +++++*++=:-:.+<tspan fill="#700004">%%</tspan>#-++=*=:++                   </tspan>
+        <tspan x="47.0" y="356.9">      *+:-+*=:=*##***+::.:=+**++:  :+*#+:.:.--..:.*#+++-=++**+.: .=:.:.-*#*+:  -*+++==:.:-+*####*-:=*=:=*=                   </tspan>
+        <tspan x="47.0" y="361.8">      :++=--=+**+:-+###*=:::-=*#*   ==-*+:. ...-+#*#%*=-=+###**+: . ..-**-=-  .#%+=:.::=*##*=--+#*+--=+*=                    </tspan>
+        <tspan x="47.0" y="366.7">        :--=-=++=--:-=+**#*+--:=+-..=-  :=- ..=#+-:*-+*::*==+:-+#:...==:  -=..=+=---+##**==---==+=----:.                     </tspan>
+        <tspan x="47.0" y="371.6">               .-++=-::=#++*#*+=-::.::..:::  :*:...#+.-*#:.*+...-*:  :::..::.:--=+##*+**=:-==*+-.                            </tspan>
+        <tspan x="47.0" y="376.5">                  :=*++*+--==*###+=--:..:::  .=..  .+*=<tspan fill="#700004">@%</tspan>=*=.  ..+. .---..:--=+#%#*==:=+#+*+-.                               </tspan>
+        <tspan x="47.0" y="381.4">                     :=*+=::++++####*=--:-:.. .......:*##+........ ..:-::-=*####+++=.-+++=:                                  </tspan>
+        <tspan x="47.0" y="386.3">                        :=**##+==++*##**=...:: .-=++*#+-=+#*++=- .::...=***#*+=-=+##*+-.                                     </tspan>
+        <tspan x="47.0" y="391.2">                           -+*+=-=---+##**=-..::.  ....--. .. .:::.:-+**##+---===++=:                                        </tspan>
+        <tspan x="47.0" y="396.1">                              :=*+==-+=-++++*+-..::::::+=..:.::.:=+**+++-=+-==*+=:                                           </tspan>
+        <tspan x="47.0" y="401.0">                                 -++*+-=::==+++*+-.::.:++:.:::-+***+==::-=+++=:                                              </tspan>
+        <tspan x="47.0" y="405.9">                                    :=++==::+==+*+#*++*#**++*#*#++=+::=+++-:                                                 </tspan>
+        <tspan x="47.0" y="410.8">                                       :=+++=:.:=+###=:---+###=-:::++++-:                                                    </tspan>
+        <tspan x="47.0" y="415.7">                                          :=++=-:*#+:-***+.-**+:=++=-:                                                       </tspan>
+        <tspan x="47.0" y="420.6">                                             :-++*%+.+*=+*-:*#*+=-.                                                          </tspan>
+        <tspan x="47.0" y="425.5">                                                :=*+-.=++-.+*+-.                                                             </tspan>
+        <tspan x="47.0" y="430.4">                                                  .=*==--=+*-                                                                </tspan>
+        <tspan x="47.0" y="435.3">                                                    .-===-:                                                                  </tspan>
       </text>
     </g>
 
-    <!-- Scanning Beam Animation (Subtle, Slow, Professional) -->
-    <g clip-path="url(#leftPanelClip_dark)">
-      <rect x="32" y="86" width="364" height="60" fill="url(#scanBeam_dark)">
-        <animate attributeName="y" values="70;460;70" dur="6.5s" repeatCount="indefinite"/>
-      </rect>
-    </g>
+    <!-- 5. FRAME / SCOPE OVERLAYS / UI DETAILS (FRAMING THE FIELD) -->
+    <g id="interface_layer">
+      <!-- Internal Scope Dashed Border -->
+      <rect x="42" y="86" width="344" height="428" rx="4" fill="none" stroke="#700004" stroke-width="1.2" stroke-opacity="0.38" stroke-dasharray="4 4"/>
+      <!-- Reticle Corner Precision Brackets -->
+      <path d="M 48 98 L 48 92 L 54 92" fill="none" stroke="#700004" stroke-width="1.6"/>
+      <path d="M 380 98 L 380 92 L 374 92" fill="none" stroke="#700004" stroke-width="1.6"/>
+      <path d="M 48 502 L 48 508 L 54 508" fill="none" stroke="#700004" stroke-width="1.6"/>
+      <path d="M 380 502 L 380 508 L 374 508" fill="none" stroke="#700004" stroke-width="1.6"/>
 
-    <!-- Left Panel Footer / Telemetry Status -->
-    <line x1="42" y1="520" x2="386" y2="520" stroke="#700004" stroke-width="1" stroke-opacity="0.4"/>
-    <text x="44" y="536" class="mono meta-tag">THREAT SIGNATURE // VISUAL MAP</text>
+      <!-- Header Badges -->
+      <rect x="42" y="42" width="168" height="22" rx="3" fill="#700004" fill-opacity="0.18" stroke="#700004" stroke-width="1"/>
+      <text x="48" y="57" class="mono" font-size="10px" font-weight="700" fill="#700004" letter-spacing="1px">THREAT SURFACE // RECON</text>
 
-    <!-- Pulsing Scan Active Beacon -->
-    <circle cx="50" cy="552" r="4.5" fill="#700004">
-      <animate attributeName="opacity" values="1;0.35;1" dur="2s" repeatCount="indefinite"/>
-    </circle>
-    <text x="62" y="556" class="mono status-text">SCAN ACTIVE</text>
+      <rect x="316" y="42" width="70" height="22" rx="3" fill="#700004" fill-opacity="0.18" stroke="#700004" stroke-width="1"/>
+      <text x="351" y="57" text-anchor="middle" class="mono" font-size="10px" font-weight="700" fill="#FEFACD">NODE_01</text>
 
-    <!-- RF Waveform / Telemetry Signal Bars -->
-    <g transform="translate(322, 544)" fill="#700004" opacity="0.8">
-      <rect x="0" y="8" width="3" height="4" rx="1"/>
-      <rect x="5" y="5" width="3" height="7" rx="1"/>
-      <rect x="10" y="2" width="3" height="10" rx="1"/>
-      <rect x="15" y="0" width="3" height="12" rx="1"/>
-      <rect x="20" y="4" width="3" height="8" rx="1"/>
-      <rect x="25" y="7" width="3" height="5" rx="1"/>
-      <rect x="30" y="3" width="3" height="9" rx="1"/>
-      <rect x="35" y="1" width="3" height="11" rx="1"/>
-      <rect x="40" y="6" width="3" height="6" rx="1"/>
-      <rect x="45" y="9" width="3" height="3" rx="1"/>
+      <!-- Sub-header Telemetry -->
+      <text x="44" y="78" class="mono meta-tag">LAT 28.6139° N / LON 77.2090° E</text>
+      <text x="384" y="78" text-anchor="end" class="mono meta-tag">FREQ: 2.4/5.8 GHz</text>
+
+      <!-- Footer / Telemetry Status -->
+      <line x1="42" y1="520" x2="386" y2="520" stroke="#700004" stroke-width="1" stroke-opacity="0.4"/>
+      <text x="44" y="536" class="mono meta-tag">THREAT SIGNATURE // VISUAL MAP</text>
+
+      <!-- Pulsing Scan Active Beacon -->
+      <circle cx="50" cy="552" r="4.5" fill="#700004">
+        <animate attributeName="opacity" values="1;0.35;1" dur="2s" repeatCount="indefinite"/>
+      </circle>
+      <text x="62" y="556" class="mono status-text">SCAN STATUS // ACTIVE</text>
+
+      <!-- RF Waveform / Telemetry Signal Bars -->
+      <g transform="translate(322, 544)" fill="#700004" opacity="0.8">
+        <rect x="0" y="8" width="3" height="4" rx="1"/>
+        <rect x="5" y="5" width="3" height="7" rx="1"/>
+        <rect x="10" y="2" width="3" height="10" rx="1"/>
+        <rect x="15" y="0" width="3" height="12" rx="1"/>
+        <rect x="20" y="4" width="3" height="8" rx="1"/>
+        <rect x="25" y="7" width="3" height="5" rx="1"/>
+        <rect x="30" y="3" width="3" height="9" rx="1"/>
+        <rect x="35" y="1" width="3" height="11" rx="1"/>
+        <rect x="40" y="6" width="3" height="6" rx="1"/>
+        <rect x="45" y="9" width="3" height="3" rx="1"/>
+      </g>
     </g>
   </g>
 
@@ -240,7 +303,7 @@
     <g transform="translate(436, 261)">
       <text x="0" y="0" class="label">Languages:</text>
       <text x="95" y="0" class="dots">................</text>
-      <text id="lang_data" x="180" y="0" class="val">Python, C++, C, TypeScript, JavaScript</text>
+      <text id="lang_data" x="180" y="0" class="val">C++, C, Python, TypeScript</text>
     </g>
 
     <!-- 5. Contact Section -->
@@ -286,7 +349,7 @@
       <!-- Left Column: Commits -->
       <text x="0" y="0" class="label">Commits:</text>
       <text x="65" y="0" class="dots">........</text>
-      <text id="commit_data" x="140" y="0" class="val-num">95+</text>
+      <text id="commit_data" x="140" y="0" class="val-num">102+</text>
 
       <!-- Right Column: Followers -->
       <text x="280" y="0" class="label">| Followers:</text>
@@ -312,7 +375,7 @@
       <text id="recent_3" x="32" y="0" class="val">EchoNode0.1</text>
 
       <text x="280" y="0" class="label">| 04:</text>
-      <text id="recent_4" x="325" y="0" class="val">Rpoper</text>
+      <text id="recent_4" x="325" y="0" class="val">Automated-OSINT-Threat-Ma</text>
     </g>
 
     <!-- System Footer Metadata -->
