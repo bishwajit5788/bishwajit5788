@@ -428,7 +428,7 @@
     <g transform="translate(436, 261)">
       <text x="0" y="0" class="label">Languages:</text>
       <text x="95" y="0" class="dots">................</text>
-      <text id="lang_data" x="180" y="0" class="val">Python, C++, C, TypeScript, JavaScript</text>
+      <text id="lang_data" x="180" y="0" class="val">C++, Python, C, TypeScript, JavaScript</text>
     </g>
 
     <!-- 5. Contact Section -->
@@ -474,7 +474,7 @@
       <!-- Left Column: Commits -->
       <text x="0" y="0" class="label">Commits:</text>
       <text x="65" y="0" class="dots">........</text>
-      <text id="commit_data" x="140" y="0" class="val-num">112+</text>
+      <text id="commit_data" x="140" y="0" class="val-num">101+</text>
 
       <!-- Right Column: Followers -->
       <text x="280" y="0" class="label">| Followers:</text>
