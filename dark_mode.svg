@@ -428,7 +428,7 @@
     <g transform="translate(436, 261)">
       <text x="0" y="0" class="label">Languages:</text>
       <text x="95" y="0" class="dots">................</text>
-      <text id="lang_data" x="180" y="0" class="val">Python, C, C++, TypeScript, JavaScript</text>
+      <text id="lang_data" x="180" y="0" class="val">C++, Python, C, TypeScript, JavaScript</text>
     </g>
 
     <!-- 5. Contact Section -->
@@ -489,10 +489,10 @@
 
     <g transform="translate(436, 473)">
       <text x="0" y="0" class="label">01:</text>
-      <text id="recent_1" x="32" y="0" class="val">SliverOS</text>
+      <text id="recent_1" x="32" y="0" class="val">AirNode-Duo</text>
 
       <text x="280" y="0" class="label">| 02:</text>
-      <text id="recent_2" x="325" y="0" class="val">AirNode-Duo</text>
+      <text id="recent_2" x="325" y="0" class="val">SliverOS</text>
     </g>
 
     <g transform="translate(436, 497)">
