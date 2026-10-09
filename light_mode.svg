@@ -462,7 +462,7 @@
       <!-- Left Column: Repos -->
       <text x="0" y="0" class="label">Repos:</text>
       <text x="65" y="0" class="dots">........</text>
-      <text id="repo_data" x="140" y="0" class="val-num">14</text>
+      <text id="repo_data" x="140" y="0" class="val-num">15</text>
 
       <!-- Right Column: Stars -->
       <text x="280" y="0" class="label">| Stars:</text>
@@ -474,7 +474,7 @@
       <!-- Left Column: Commits -->
       <text x="0" y="0" class="label">Commits:</text>
       <text x="65" y="0" class="dots">........</text>
-      <text id="commit_data" x="140" y="0" class="val-num">101+</text>
+      <text id="commit_data" x="140" y="0" class="val-num">104+</text>
 
       <!-- Right Column: Followers -->
       <text x="280" y="0" class="label">| Followers:</text>
@@ -489,18 +489,18 @@
 
     <g transform="translate(436, 473)">
       <text x="0" y="0" class="label">01:</text>
-      <text id="recent_1" x="32" y="0" class="val">AirNode-Duo</text>
+      <text id="recent_1" x="32" y="0" class="val">AquaSentinel</text>
 
       <text x="280" y="0" class="label">| 02:</text>
-      <text id="recent_2" x="325" y="0" class="val">SliverOS</text>
+      <text id="recent_2" x="325" y="0" class="val">AirNode-Duo</text>
     </g>
 
     <g transform="translate(436, 497)">
       <text x="0" y="0" class="label">03:</text>
-      <text id="recent_3" x="32" y="0" class="val">PondEyes-Omni-Lighthouse</text>
+      <text id="recent_3" x="32" y="0" class="val">SliverOS</text>
 
       <text x="280" y="0" class="label">| 04:</text>
-      <text id="recent_4" x="325" y="0" class="val">EchoNode0.1</text>
+      <text id="recent_4" x="325" y="0" class="val">PondEyes-Omni-Lighthouse</text>
     </g>
 
     <!-- System Footer Metadata -->
