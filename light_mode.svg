@@ -462,7 +462,7 @@
       <!-- Left Column: Repos -->
       <text x="0" y="0" class="label">Repos:</text>
       <text x="65" y="0" class="dots">........</text>
-      <text id="repo_data" x="140" y="0" class="val-num">16</text>
+      <text id="repo_data" x="140" y="0" class="val-num">17</text>
 
       <!-- Right Column: Stars -->
       <text x="280" y="0" class="label">| Stars:</text>
@@ -489,18 +489,18 @@
 
     <g transform="translate(436, 473)">
       <text x="0" y="0" class="label">01:</text>
-      <text id="recent_1" x="32" y="0" class="val">PondEyes-Omni-Lighthouse</text>
+      <text id="recent_1" x="32" y="0" class="val">TD-LA-System</text>
 
       <text x="280" y="0" class="label">| 02:</text>
-      <text id="recent_2" x="325" y="0" class="val">MD-Studio</text>
+      <text id="recent_2" x="325" y="0" class="val">PondEyes-Omni-Lighthouse</text>
     </g>
 
     <g transform="translate(436, 497)">
       <text x="0" y="0" class="label">03:</text>
-      <text id="recent_3" x="32" y="0" class="val">AquaSentinel</text>
+      <text id="recent_3" x="32" y="0" class="val">MD-Studio</text>
 
       <text x="280" y="0" class="label">| 04:</text>
-      <text id="recent_4" x="325" y="0" class="val">AirNode-Duo</text>
+      <text id="recent_4" x="325" y="0" class="val">AquaSentinel</text>
     </g>
 
     <!-- System Footer Metadata -->
